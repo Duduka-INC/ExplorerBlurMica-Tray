@@ -91,6 +91,8 @@ public static class ElevatedCommands
         string? previousDir = previousDll is null ? null : Path.GetDirectoryName(previousDll);
         bool upgrading = previousDir is not null && !PathsEqual(previousDir, targetDir);
 
+        // An uninstall without a restart since then leaves these files queued for deletion.
+        PendingFileOperations.CancelDeletionsUnder(AppPaths.AppRoot);
         EbmPackage.Extract(zip, targetDir);
 
         // Keep the user's settings when moving to a new version.

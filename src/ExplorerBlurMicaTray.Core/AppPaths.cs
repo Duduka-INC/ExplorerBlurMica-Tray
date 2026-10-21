@@ -16,8 +16,11 @@ public static class AppPaths
     /// administrators can replace it; a per-user folder would let one account inject code into
     /// another account's Explorer.
     /// </summary>
-    public static string EbmRoot =>
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), AppFolderName, "ebm");
+    public static string EbmRoot => Path.Combine(AppRoot, "ebm");
+
+    /// <summary>The install folder in Program Files; Setup puts the app here too.</summary>
+    public static string AppRoot =>
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), AppFolderName);
 
     public static string EbmVersionDir(string version) => Path.Combine(EbmRoot, version);
 }
