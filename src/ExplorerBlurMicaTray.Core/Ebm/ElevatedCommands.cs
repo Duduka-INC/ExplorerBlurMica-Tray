@@ -53,12 +53,12 @@ public static class ElevatedCommands
         }
     }
 
-    internal sealed record InstallArgs(string ZipPath, string Sha256, string Version, string UserSid)
+    internal sealed record InstallArgs(string ZipPath, string Sha256, string Version)
     {
         public static bool TryParse(IReadOnlyList<string> args, out InstallArgs result)
         {
             result = null!;
-            string? zip = null, sha = null, version = null, sid = null;
+            string? zip = null, sha = null, version = null;
             for (int i = 1; i + 1 < args.Count; i += 2)
             {
                 switch (args[i])
@@ -66,32 +66,17 @@ public static class ElevatedCommands
                     case "--zip": zip = args[i + 1]; break;
                     case "--sha256": sha = args[i + 1]; break;
                     case "--version": version = args[i + 1]; break;
-                    case "--user-sid": sid = args[i + 1]; break;
                     default: return false;
                 }
             }
 
             if (zip is null || !Path.IsPathFullyQualified(zip)
                 || sha is null || !EbmReleaseClient.IsSha256Hex(sha)
-                || !EbmVersion.IsValid(version)
-                || sid is null || !IsSid(sid))
+                || !EbmVersion.IsValid(version))
                 return false;
 
-            result = new InstallArgs(zip, sha, version!, sid);
+            result = new InstallArgs(zip, sha, version!);
             return true;
-        }
-
-        private static bool IsSid(string value)
-        {
-            try
-            {
-                _ = new SecurityIdentifier(value);
-                return true;
-            }
-            catch (ArgumentException)
-            {
-                return false;
-            }
         }
     }
 
@@ -113,8 +98,10 @@ public static class ElevatedCommands
         if (upgrading && File.Exists(Path.Combine(previousDir!, EbmConstants.ConfigFileName)))
             File.Copy(Path.Combine(previousDir!, EbmConstants.ConfigFileName), targetConfig, overwrite: true);
 
-        // The app runs without elevation and writes the config in place.
-        GrantModify(targetConfig, new SecurityIdentifier(args.UserSid));
+        // The app runs without elevation and writes the config in place. The config is shared by
+        // every account anyway, since ExplorerBlurMica is registered machine-wide, and it holds
+        // only colors and flags; granting all users also works when Setup cannot tell who started it.
+        GrantModify(targetConfig, new SecurityIdentifier(WellKnownSidType.BuiltinUsersSid, null));
 
         if (upgrading)
             EbmRegistration.RunRegsvr32(previousDll!, unregister: true);

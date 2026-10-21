@@ -58,7 +58,17 @@ ebmt config set effect Acrylic  change a setting
 ebmt reopen                     close and reopen Explorer windows
 ```
 
-ExplorerBlurMica is installed to `%ProgramFiles%\ExplorerBlurMica-Tray\ebm\<version>`. It is registered for every account on the PC, so its DLL must sit where only administrators can replace it. The installing user gets write access to `config.ini` only.
+### Installer
+
+The installer is built with [Inno Setup 7](https://jrsoftware.org/isinfo.php):
+
+```
+.\installer\build.ps1 -Version 0.1.0
+```
+
+It publishes the app with Native AOT and writes `artifacts\ExplorerBlurMica-Tray-Setup-<version>.exe`. Setup downloads the official ExplorerBlurMica release from GitHub, checks its SHA-256 and registers it, so a single administrator prompt covers the whole install. If the download fails, the app is still installed.
+
+ExplorerBlurMica is installed to `%ProgramFiles%\ExplorerBlurMica-Tray\ebm\<version>`. It is registered for every account on the PC, so its DLL must sit where only administrators can replace it. Users get write access to `config.ini` only, which holds nothing but colors and flags.
 
 ## Troubleshooting
 

@@ -41,7 +41,7 @@ public sealed class EbmInstaller(EbmReleaseClient releases)
 
         progress?.Report(new EbmInstallProgress(EbmInstallStep.Registering));
         int exitCode = await Elevation.RunAsync(
-            ["install", "--zip", zipPath, "--sha256", release.Sha256, "--version", release.Version, "--user-sid", Elevation.CurrentUserSid],
+            ["install", "--zip", zipPath, "--sha256", release.Sha256, "--version", release.Version],
             ct);
         ThrowOnFailure(exitCode);
         return GetStatus();

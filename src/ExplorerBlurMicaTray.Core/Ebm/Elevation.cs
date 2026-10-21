@@ -19,15 +19,6 @@ public static class Elevation
         }
     }
 
-    public static string CurrentUserSid
-    {
-        get
-        {
-            using var identity = WindowsIdentity.GetCurrent();
-            return identity.User!.Value;
-        }
-    }
-
     /// <summary>
     /// Runs an <see cref="ElevatedCommands"/> command: in this process when it is already elevated,
     /// otherwise by starting this executable again through UAC.
