@@ -40,4 +40,4 @@ if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed" }
     (Join-Path $PSScriptRoot "ExplorerBlurMicaTray.iss")
 if ($LASTEXITCODE -ne 0) { throw "ISCC failed" }
 
-Get-Item (Join-Path $outputDir "ExplorerBlurMica-Tray-Setup-$Version.exe")
+Write-Host "Built $(Join-Path $outputDir "ExplorerBlurMica-Tray-Setup-$Version.exe")"

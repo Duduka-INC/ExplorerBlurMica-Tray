@@ -20,6 +20,7 @@ try
         "config" => Config(args[1..]),
         "windows" => Windows(),
         "reopen" => await Reopen(),
+        "restart-explorer" => await RestartExplorer(),
         _ => Help(),
     };
 }
@@ -139,6 +140,13 @@ async Task<int> Reopen()
     return 0;
 }
 
+async Task<int> RestartExplorer()
+{
+    await ExplorerWindows.RestartExplorerAsync();
+    Console.WriteLine("Explorer restarted.");
+    return 0;
+}
+
 static int Help()
 {
     Console.WriteLine("""
@@ -149,7 +157,8 @@ static int Help()
         ebmt config                      show config.ini
         ebmt config set <key> <value>    effect | clearAddress | clearBarBg | clearWinUIBg | showLine | darkAlpha | lightAlpha
         ebmt windows                     list open Explorer tabs
-        ebmt reopen                      close and reopen Explorer windows
+        ebmt reopen                      close and reopen Explorer windows (applies config changes)
+        ebmt restart-explorer            restart explorer.exe (needed after install, update or uninstall)
         """);
     return 2;
 }

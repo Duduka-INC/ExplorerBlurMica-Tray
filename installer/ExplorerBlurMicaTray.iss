@@ -61,8 +61,8 @@ en.TaskInstallEbm=Download and install ExplorerBlurMica {#EbmVersion} by Maplesp
 ru.TaskInstallEbm=Скачать и установить ExplorerBlurMica {#EbmVersion} от Maplespe (около 275 КБ с GitHub)
 en.StatusRegistering=Registering ExplorerBlurMica...
 ru.StatusRegistering=Регистрация ExplorerBlurMica...
-en.RunReopen=Reopen open File Explorer windows so the effect shows up
-ru.RunReopen=Переоткрыть окна Проводника, чтобы появился эффект
+en.RunRestartExplorer=Restart File Explorer to turn the effect on (the taskbar disappears for a moment)
+ru.RunRestartExplorer=Перезапустить Проводник, чтобы включить эффект (панель задач на секунду пропадёт)
 en.EbmDownloadFailed=ExplorerBlurMica could not be downloaded:%n%1%n%nSetup will finish without it. You can install it later from the app.
 ru.EbmDownloadFailed=Не удалось скачать ExplorerBlurMica:%n%1%n%nУстановка завершится без него. Его можно будет установить позже из приложения.
 en.EbmInstallFailed=ExplorerBlurMica could not be registered (code %1). You can install it later from the app.
@@ -78,7 +78,9 @@ Source: "{#PublishDir}\{#AppExe}"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\LICENSE"; DestDir: "{app}"; DestName: "LICENSE.txt"; Flags: ignoreversion
 
 [Run]
-Filename: "{app}\{#AppExe}"; Parameters: "reopen"; Description: "{cm:RunReopen}"; \
+; ExplorerBlurMica hooks Explorer when the process starts, so a fresh registration needs a restart,
+; not just reopened windows. Runs as the original user so the shell does not come back elevated.
+Filename: "{app}\{#AppExe}"; Parameters: "restart-explorer"; Description: "{cm:RunRestartExplorer}"; \
   Flags: postinstall runasoriginaluser runhidden nowait skipifsilent; Check: EbmWasInstalled
 
 [UninstallRun]

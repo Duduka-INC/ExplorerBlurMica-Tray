@@ -15,6 +15,12 @@ public static class EbmConstants
     public const string DllFileName = "ExplorerBlurMica.dll";
     public const string ConfigFileName = "config.ini";
 
+    /// <summary>
+    /// Effect written into a freshly installed config. The shipped default is Mica, but Mica draws
+    /// nothing on recent Windows 11 builds (seen on 26200.9711; upstream issue #299) while Acrylic works.
+    /// </summary>
+    public const EbmEffect InstallDefaultEffect = EbmEffect.Acrylic;
+
     /// <summary>Upper bound for the release archive; the real one is under 300 KB.</summary>
     public const long MaxArchiveBytes = 20 * 1024 * 1024;
 

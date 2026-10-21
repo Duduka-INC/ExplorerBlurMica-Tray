@@ -23,7 +23,8 @@ public static class EbmPackage
     }
 
     /// <summary>
-    /// Writes the DLL and, unless one is already there, the default config into <paramref name="targetDir"/>.
+    /// Writes the DLL and, unless one is already there, the default config into <paramref name="targetDir"/>,
+    /// switching a new config to <see cref="EbmConstants.InstallDefaultEffect"/>.
     /// Only these two entries are read, so nothing else in the archive can land on disk.
     /// </summary>
     public static void Extract(byte[] zipBytes, string targetDir)
@@ -42,7 +43,12 @@ public static class EbmPackage
 
         string configPath = Path.Combine(targetDir, EbmConstants.ConfigFileName);
         if (config is not null && !File.Exists(configPath))
+        {
             File.WriteAllBytes(configPath, ReadEntry(config));
+            var defaults = EbmConfig.Load(configPath);
+            defaults.Effect = EbmConstants.InstallDefaultEffect;
+            defaults.Save(configPath);
+        }
     }
 
     private static byte[] ReadEntry(ZipArchiveEntry entry)

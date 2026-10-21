@@ -76,8 +76,8 @@ public static class ExplorerWindows
     public static int CountWindows() => GetOpen().Select(w => w.WindowHandle).Distinct().Count();
 
     /// <summary>
-    /// Closes every Explorer window and opens its folders again. Windows has no way to open a tab
-    /// from outside, so each tab comes back as its own window.
+    /// Closes every Explorer window and opens its folders again, which applies a changed config.
+    /// Windows has no way to open a tab from outside, so each tab comes back as its own window.
     /// </summary>
     /// <returns>The number of windows that were closed.</returns>
     public static async Task<int> ReopenAsync(CancellationToken ct = default)
@@ -87,18 +87,72 @@ public static class ExplorerWindows
         foreach (nint hwnd in windows)
             ShellNative.PostMessageW(hwnd, ShellNative.WmClose, 0, 0);
 
-        var waited = Stopwatch.StartNew();
-        while (windows.Any(ShellNative.IsWindow) && waited.Elapsed < TimeSpan.FromSeconds(5))
-            await Task.Delay(100, ct);
+        await WaitUntil(() => !windows.Any(ShellNative.IsWindow), TimeSpan.FromSeconds(5), ct);
+        Open(tabs);
+        return windows.Length;
+    }
 
-        string explorer = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "explorer.exe");
+    /// <summary>
+    /// Restarts explorer.exe and reopens the folders that were open. ExplorerBlurMica hooks Explorer
+    /// when the process starts, so installing, updating or removing it needs a restart, not a reopen.
+    /// The taskbar and desktop disappear for a moment.
+    /// </summary>
+    public static async Task RestartExplorerAsync(CancellationToken ct = default)
+    {
+        // An Explorer started by an elevated process would run the whole shell elevated.
+        if (Elevation.IsElevated)
+            throw new InvalidOperationException("Restart Explorer from a non-elevated process.");
+
+        var tabs = GetOpen();
+        using var self = Process.GetCurrentProcess();
+        var explorers = Process.GetProcessesByName("explorer").Where(p => p.SessionId == self.SessionId).ToList();
+        foreach (var process in explorers)
+        {
+            try
+            {
+                process.Kill();
+            }
+            catch (Exception e) when (e is InvalidOperationException or System.ComponentModel.Win32Exception)
+            {
+            }
+        }
+        await WaitUntil(() => explorers.All(p => p.HasExited), TimeSpan.FromSeconds(5), ct);
+        foreach (var process in explorers)
+            process.Dispose();
+
+        // Windows usually restarts the shell by itself; start it only if it does not.
+        if (!await WaitUntil(() => ShellNative.FindWindow("Shell_TrayWnd", null) != 0, TimeSpan.FromSeconds(3), ct))
+        {
+            Process.Start(new ProcessStartInfo(ExplorerPath) { UseShellExecute = false })?.Dispose();
+            await WaitUntil(() => ShellNative.FindWindow("Shell_TrayWnd", null) != 0, TimeSpan.FromSeconds(10), ct);
+        }
+
+        Open(tabs);
+    }
+
+    private static string ExplorerPath =>
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "explorer.exe");
+
+    private static void Open(IEnumerable<ExplorerWindow> tabs)
+    {
         foreach (var tab in tabs)
         {
-            var psi = new ProcessStartInfo(explorer) { UseShellExecute = false };
+            var psi = new ProcessStartInfo(ExplorerPath) { UseShellExecute = false };
             psi.ArgumentList.Add(tab.Location);
             Process.Start(psi)?.Dispose();
         }
-        return windows.Length;
+    }
+
+    private static async Task<bool> WaitUntil(Func<bool> condition, TimeSpan timeout, CancellationToken ct)
+    {
+        var waited = Stopwatch.StartNew();
+        while (!condition())
+        {
+            if (waited.Elapsed >= timeout)
+                return false;
+            await Task.Delay(100, ct);
+        }
+        return true;
     }
 
     private static ExplorerWindow? TryRead(IShellWindows shellWindows, int index)

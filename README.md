@@ -55,8 +55,11 @@ ebmt install                    download, verify and register (asks for administ
 ebmt uninstall                  unregister (asks for administrator rights)
 ebmt config                     show config.ini
 ebmt config set effect Acrylic  change a setting
-ebmt reopen                     close and reopen Explorer windows
+ebmt reopen                     close and reopen Explorer windows (applies config changes)
+ebmt restart-explorer           restart explorer.exe (needed after install, update or uninstall)
 ```
+
+A fresh install uses the Acrylic effect: Mica, ExplorerBlurMica's own default, draws nothing on recent Windows 11 builds (upstream issue [#299](https://github.com/Maplespe/ExplorerBlurMica/issues/299)).
 
 ### Installer
 

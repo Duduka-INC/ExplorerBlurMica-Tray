@@ -45,6 +45,16 @@ public sealed class EbmPackageTests : IDisposable
     }
 
     [Fact]
+    public void NewConfigGetsInstallDefaultEffect()
+    {
+        EbmPackage.Extract(Zip(("Release/ExplorerBlurMica.dll", "dll"), ("Release/config.ini", "[config]\r\neffect=2\r\nshowLine=true\r\n")), _dir);
+
+        var config = EbmConfig.Load(Path.Combine(_dir, "config.ini"));
+        Assert.Equal(EbmConstants.InstallDefaultEffect, config.Effect);
+        Assert.True(config.ShowLine);
+    }
+
+    [Fact]
     public void KeepsExistingConfig()
     {
         Directory.CreateDirectory(_dir);
