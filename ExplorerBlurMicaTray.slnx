@@ -1,0 +1,12 @@
+<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+  </Configurations>
+  <Folder Name="/src/">
+    <Project Path="src/ExplorerBlurMicaTray.Cli/ExplorerBlurMicaTray.Cli.csproj" />
+    <Project Path="src/ExplorerBlurMicaTray.Core/ExplorerBlurMicaTray.Core.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/ExplorerBlurMicaTray.Core.Tests/ExplorerBlurMicaTray.Core.Tests.csproj" />
+  </Folder>
+</Solution>

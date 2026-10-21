@@ -37,6 +37,29 @@ Early development. Nothing is released yet.
 
 Supported effects depend on the Windows version; see the [ExplorerBlurMica README](https://github.com/Maplespe/ExplorerBlurMica#readme) for details.
 
+## Building
+
+Requires the .NET 10 SDK on Windows 10 or 11 (x64).
+
+```
+dotnet build ExplorerBlurMicaTray.slnx
+dotnet test ExplorerBlurMicaTray.slnx
+```
+
+The solution currently holds the core library and `ebmt`, a small command-line tool for trying it out:
+
+```
+ebmt status                     ExplorerBlurMica state, transparency, open Explorer windows
+ebmt latest                     latest official release on GitHub
+ebmt install                    download, verify and register (asks for administrator rights)
+ebmt uninstall                  unregister (asks for administrator rights)
+ebmt config                     show config.ini
+ebmt config set effect Acrylic  change a setting
+ebmt reopen                     close and reopen Explorer windows
+```
+
+ExplorerBlurMica is installed to `%ProgramFiles%\ExplorerBlurMica-Tray\ebm\<version>`. It is registered for every account on the PC, so its DLL must sit where only administrators can replace it. The installing user gets write access to `config.ini` only.
+
 ## Troubleshooting
 
 If File Explorer crashes after enabling the effect, hold `Esc` while opening Explorer: ExplorerBlurMica will not load, and you can uninstall it from the app or with the original `uninstall.cmd`.

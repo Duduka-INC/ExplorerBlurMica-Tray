@@ -1,0 +1,14 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>ebmt</AssemblyName>
+    <RootNamespace>ExplorerBlurMicaTray.Cli</RootNamespace>
+    <PublishAot>true</PublishAot>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ExplorerBlurMicaTray.Core\ExplorerBlurMicaTray.Core.csproj" />
+  </ItemGroup>
+
+</Project>
