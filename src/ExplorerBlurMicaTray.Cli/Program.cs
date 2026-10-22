@@ -17,6 +17,8 @@ try
         "latest" => await Latest(),
         "install" => await Install(),
         "uninstall" => await Uninstall(),
+        "enable" => await Toggle(enable: true, restart: !args.Contains("--no-restart")),
+        "disable" => await Toggle(enable: false, restart: !args.Contains("--no-restart")),
         "config" => Config(args[1..]),
         "windows" => Windows(),
         "reopen" => await Reopen(),
@@ -63,6 +65,15 @@ async Task<int> Uninstall()
 {
     var status = await installer.UninstallAsync();
     Console.WriteLine($"ExplorerBlurMica: {status.State}");
+    return 0;
+}
+
+async Task<int> Toggle(bool enable, bool restart)
+{
+    var status = enable ? await installer.EnableAsync() : await installer.DisableAsync();
+    Console.WriteLine($"ExplorerBlurMica: {status.State}");
+    if (restart)
+        await ExplorerWindows.RestartExplorerAsync();
     return 0;
 }
 
@@ -153,7 +164,9 @@ static int Help()
         ebmt status                      ExplorerBlurMica state, transparency, open windows
         ebmt latest                      latest official release on GitHub
         ebmt install                     download, verify and register (asks for admin rights)
-        ebmt uninstall                   unregister (asks for admin rights)
+        ebmt uninstall                   unregister and delete (asks for admin rights)
+        ebmt enable [--no-restart]       register the installed version and restart Explorer (asks for admin rights)
+        ebmt disable [--no-restart]      unregister but keep files, then restart Explorer (asks for admin rights)
         ebmt config                      show config.ini
         ebmt config set <key> <value>    effect | clearAddress | clearBarBg | clearWinUIBg | showLine | darkAlpha | lightAlpha
         ebmt windows                     list open Explorer tabs

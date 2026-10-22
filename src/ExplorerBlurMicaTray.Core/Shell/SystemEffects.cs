@@ -13,6 +13,13 @@ public static partial class SystemEffects
         return key?.GetValue("EnableTransparency") is not int value || value != 0;
     }
 
+    /// <summary>Settings → Personalization → Colors → app mode; Explorer and ExplorerBlurMica's [light]/[dark] follow it.</summary>
+    public static bool IsAppsLightTheme()
+    {
+        using var key = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize");
+        return key?.GetValue("AppsUseLightTheme") is int value && value != 0;
+    }
+
     /// <summary>Energy saver (battery saver) also disables transparency while it is on.</summary>
     public static bool IsEnergySaverOn() => GetSystemPowerStatus(out var status) && status.SystemStatusFlag == 1;
 

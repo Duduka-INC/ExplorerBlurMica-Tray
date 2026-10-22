@@ -39,6 +39,8 @@ public static class ElevatedCommands
             return args.Count == 0 ? ExitCodes.BadArguments : args[0] switch
             {
                 "install" => InstallArgs.TryParse(args, out var install) ? Install(install) : ExitCodes.BadArguments,
+                "enable" => Enable(),
+                "disable" => Disable(),
                 "uninstall" => Uninstall(),
                 _ => ExitCodes.BadArguments,
             };
@@ -115,15 +117,28 @@ public static class ElevatedCommands
         return ExitCodes.Ok;
     }
 
-    private static int Uninstall()
+    /// <summary>Registers the newest installed version again, leaving its files and config as they are.</summary>
+    private static int Enable()
+    {
+        string? dll = EbmRegistration.FindInstalledDll();
+        if (dll is null)
+            return ExitCodes.Failed;
+        return EbmRegistration.RunRegsvr32(dll, unregister: false) == 0 ? ExitCodes.Ok : ExitCodes.RegistrationFailed;
+    }
+
+    /// <summary>Unregisters ExplorerBlurMica but keeps its files, so <see cref="Enable"/> can bring it back.</summary>
+    private static int Disable()
     {
         string? dll = EbmRegistration.GetRegisteredDllPath();
-        if (dll is null)
+        if (dll is null || !File.Exists(dll))
             return ExitCodes.Ok;
+        return EbmRegistration.RunRegsvr32(dll, unregister: true) == 0 ? ExitCodes.Ok : ExitCodes.RegistrationFailed;
+    }
 
-        if (File.Exists(dll) && EbmRegistration.RunRegsvr32(dll, unregister: true) != 0)
+    private static int Uninstall()
+    {
+        if (Disable() != ExitCodes.Ok)
             return ExitCodes.RegistrationFailed;
-
         DeleteOtherVersions(keep: null);
         return ExitCodes.Ok;
     }

@@ -46,18 +46,25 @@ dotnet build ExplorerBlurMicaTray.slnx
 dotnet test ExplorerBlurMicaTray.slnx
 ```
 
-The solution currently holds the core library and `ebmt`, a small command-line tool for trying it out:
+The solution holds:
+
+- `ExplorerBlurMicaTray.App` — the tray app (WinUI 3, Native AOT). Left click on the tray icon opens the flyout: pick Default, Mica, Mica Alt, Acrylic or Blur, set the tint and press Apply. Right click opens a menu. The flyout's own background follows the material you pick.
+- `ExplorerBlurMicaTray.Core` — installing, configuring and applying ExplorerBlurMica.
+- `ebmt` — a small command-line tool over the core, also used by the installer:
 
 ```
 ebmt status                     ExplorerBlurMica state, transparency, open Explorer windows
 ebmt latest                     latest official release on GitHub
 ebmt install                    download, verify and register (asks for administrator rights)
-ebmt uninstall                  unregister (asks for administrator rights)
+ebmt uninstall                  unregister and delete (asks for administrator rights)
+ebmt enable / disable           turn the effect on or off, keeping the files (asks for administrator rights)
 ebmt config                     show config.ini
 ebmt config set effect Acrylic  change a setting
 ebmt reopen                     close and reopen Explorer windows (applies config changes)
 ebmt restart-explorer           restart explorer.exe (needed after install, update or uninstall)
 ```
+
+"Default" turns ExplorerBlurMica off by unregistering it, since its config has no "no effect" value. Explorer only loads it from a machine-wide registration, so switching to and from Default asks for administrator rights and restarts Explorer; switching between materials does neither.
 
 A fresh install uses the Acrylic effect: Mica, ExplorerBlurMica's own default, draws nothing on recent Windows 11 builds (upstream issue [#299](https://github.com/Maplespe/ExplorerBlurMica/issues/299)).
 

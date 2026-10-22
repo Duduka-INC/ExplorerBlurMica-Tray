@@ -7,8 +7,11 @@
 #ifndef AppVersion
   #define AppVersion "0.1.0"
 #endif
-#ifndef PublishDir
-  #define PublishDir "..\artifacts\publish"
+#ifndef CliDir
+  #define CliDir "..\artifacts\publish\cli"
+#endif
+#ifndef AppDir
+  #define AppDir "..\artifacts\publish\app"
 #endif
 #ifndef OutputDir
   #define OutputDir "..\artifacts"
@@ -19,7 +22,11 @@
 #define EbmUrl "https://github.com/Maplespe/ExplorerBlurMica/releases/download/2.1.0/Release_x64.zip"
 #define EbmSha256 "71f678c2356a11a18f9b1e3935d64e035c4f3db71ecf76ff3d27878694f358d5"
 
-#define AppExe "ebmt.exe"
+; The tray app, and the command-line tool Setup uses for the steps it hands to the core.
+#define AppExe "ExplorerBlurMicaTray.exe"
+#define CliExe "ebmt.exe"
+; Must match Program.MutexName in the app: Setup asks to close the app before replacing it.
+#define AppMutexName "ExplorerBlurMicaTray.Running"
 
 [Setup]
 AppId={{A5099D13-FE90-4FCE-9557-083982A77B71}
@@ -42,6 +49,8 @@ MinVersion=10.0.17763
 WizardStyle=modern dynamic
 UninstallDisplayName=ExplorerBlurMica Tray
 UninstallDisplayIcon={app}\{#AppExe}
+AppMutex={#AppMutexName}
+CloseApplications=yes
 OutputDir={#OutputDir}
 OutputBaseFilename=ExplorerBlurMica-Tray-Setup-{#AppVersion}
 Compression=lzma2/max
@@ -63,6 +72,10 @@ en.StatusRegistering=Registering ExplorerBlurMica...
 ru.StatusRegistering=Регистрация ExplorerBlurMica...
 en.RunRestartExplorer=Restart File Explorer to turn the effect on (the taskbar disappears for a moment)
 ru.RunRestartExplorer=Перезапустить Проводник, чтобы включить эффект (панель задач на секунду пропадёт)
+en.TaskAutostart=Start ExplorerBlurMica Tray with Windows (for all users)
+ru.TaskAutostart=Запускать ExplorerBlurMica Tray вместе с Windows (для всех пользователей)
+en.RunApp=Start ExplorerBlurMica Tray
+ru.RunApp=Запустить ExplorerBlurMica Tray
 en.EbmDownloadFailed=ExplorerBlurMica could not be downloaded:%n%1%n%nSetup will finish without it. You can install it later from the app.
 ru.EbmDownloadFailed=Не удалось скачать ExplorerBlurMica:%n%1%n%nУстановка завершится без него. Его можно будет установить позже из приложения.
 en.EbmInstallFailed=ExplorerBlurMica could not be registered (code %1). You can install it later from the app.
@@ -72,19 +85,32 @@ ru.UninstallRestartNote=Окна Проводника сохранят эффе�
 
 [Tasks]
 Name: "installebm"; Description: "{cm:TaskInstallEbm}"
+Name: "autostart"; Description: "{cm:TaskAutostart}"
 
 [Files]
-Source: "{#PublishDir}\{#AppExe}"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#AppDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#CliDir}\{#CliExe}"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\LICENSE"; DestDir: "{app}"; DestName: "LICENSE.txt"; Flags: ignoreversion
+
+[Icons]
+Name: "{autoprograms}\ExplorerBlurMica Tray"; Filename: "{app}\{#AppExe}"
+
+[Registry]
+; ExplorerBlurMica is machine-wide, so the tray app starts for every account.
+Root: HKLM; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "ExplorerBlurMica Tray"; \
+  ValueData: """{app}\{#AppExe}"""; Flags: uninsdeletevalue; Tasks: autostart
 
 [Run]
 ; ExplorerBlurMica hooks Explorer when the process starts, so a fresh registration needs a restart,
-; not just reopened windows. Runs as the original user so the shell does not come back elevated.
-Filename: "{app}\{#AppExe}"; Parameters: "restart-explorer"; Description: "{cm:RunRestartExplorer}"; \
-  Flags: postinstall runasoriginaluser runhidden nowait skipifsilent; Check: EbmWasInstalled
+; not just reopened windows. Runs as the original user so the shell does not come back elevated,
+; and finishes before the app starts so its tray icon lands on the new taskbar.
+Filename: "{app}\{#CliExe}"; Parameters: "restart-explorer"; Description: "{cm:RunRestartExplorer}"; \
+  Flags: postinstall runasoriginaluser runhidden waituntilterminated skipifsilent; Check: EbmWasInstalled
+Filename: "{app}\{#AppExe}"; Description: "{cm:RunApp}"; Flags: postinstall runasoriginaluser nowait skipifsilent
 
 [UninstallRun]
-Filename: "{app}\{#AppExe}"; Parameters: "--ebmt-elevated uninstall"; Flags: runhidden waituntilterminated; RunOnceId: "UnregisterEbm"
+Filename: "{sys}\taskkill.exe"; Parameters: "/F /IM {#AppExe}"; Flags: runhidden waituntilterminated; RunOnceId: "StopApp"
+Filename: "{app}\{#CliExe}"; Parameters: "--ebmt-elevated uninstall"; Flags: runhidden waituntilterminated; RunOnceId: "UnregisterEbm"
 
 [Code]
 var
@@ -132,7 +158,7 @@ begin
     Exit;
 
   WizardForm.StatusLabel.Caption := CustomMessage('StatusRegistering');
-  if Exec(ExpandConstant('{app}\{#AppExe}'),
+  if Exec(ExpandConstant('{app}\{#CliExe}'),
       ExpandConstant('--ebmt-elevated install --zip "{tmp}\Release_x64.zip" --sha256 {#EbmSha256} --version {#EbmVersion}'),
       '', SW_HIDE, ewWaitUntilTerminated, ResultCode) and (ResultCode = 0) then
     EbmInstalled := True

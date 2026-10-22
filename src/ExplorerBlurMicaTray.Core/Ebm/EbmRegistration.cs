@@ -6,7 +6,10 @@ namespace ExplorerBlurMicaTray.Core;
 public enum EbmState
 {
     NotInstalled,
-    Installed,
+    /// <summary>Installed and registered: Explorer loads it.</summary>
+    Enabled,
+    /// <summary>Installed but not registered: Explorer looks as usual (the app's "Default").</summary>
+    Disabled,
     /// <summary>Registered, but the DLL it points to is gone.</summary>
     Broken,
 }
@@ -30,12 +33,33 @@ public static class EbmRegistration
 
     public static EbmStatus GetStatus()
     {
-        string? dll = GetRegisteredDllPath();
-        if (dll is null)
-            return new EbmStatus(EbmState.NotInstalled, null, null);
-        if (!File.Exists(dll))
-            return new EbmStatus(EbmState.Broken, dll, null);
-        return new EbmStatus(EbmState.Installed, dll, GetVersion(dll));
+        string? registered = GetRegisteredDllPath();
+        if (registered is not null)
+        {
+            return File.Exists(registered)
+                ? new EbmStatus(EbmState.Enabled, registered, GetVersion(registered))
+                : new EbmStatus(EbmState.Broken, registered, null);
+        }
+
+        string? installed = FindInstalledDll();
+        return installed is null
+            ? new EbmStatus(EbmState.NotInstalled, null, null)
+            : new EbmStatus(EbmState.Disabled, installed, GetVersion(installed));
+    }
+
+    /// <summary>The newest version the app installed under <see cref="AppPaths.EbmRoot"/>, registered or not.</summary>
+    internal static string? FindInstalledDll() => FindInstalledDll(AppPaths.EbmRoot);
+
+    internal static string? FindInstalledDll(string ebmRoot)
+    {
+        if (!Directory.Exists(ebmRoot))
+            return null;
+        return Directory.EnumerateDirectories(ebmRoot)
+            .Select(dir => (Dir: dir, Name: Path.GetFileName(dir)))
+            .Where(d => EbmVersion.IsValid(d.Name) && File.Exists(Path.Combine(d.Dir, EbmConstants.DllFileName)))
+            .OrderByDescending(d => Version.Parse(d.Name))
+            .Select(d => Path.Combine(d.Dir, EbmConstants.DllFileName))
+            .FirstOrDefault();
     }
 
     /// <summary>The app installs each version into a folder named after it; other installs fall back to the file version.</summary>

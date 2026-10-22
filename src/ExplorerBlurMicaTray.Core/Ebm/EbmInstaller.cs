@@ -19,7 +19,8 @@ public sealed class EbmInstaller(EbmReleaseClient releases)
     {
         var latest = await releases.GetLatestAsync(ct);
         var status = GetStatus();
-        return status.State == EbmState.Installed && !EbmVersion.IsNewer(latest.Version, status.Version) ? null : latest;
+        bool installed = status.State is EbmState.Enabled or EbmState.Disabled;
+        return installed && !EbmVersion.IsNewer(latest.Version, status.Version) ? null : latest;
     }
 
     public async Task<EbmStatus> InstallLatestAsync(IProgress<EbmInstallProgress>? progress = null, CancellationToken ct = default)
@@ -44,6 +45,20 @@ public sealed class EbmInstaller(EbmReleaseClient releases)
             ["install", "--zip", zipPath, "--sha256", release.Sha256, "--version", release.Version],
             ct);
         ThrowOnFailure(exitCode);
+        return GetStatus();
+    }
+
+    /// <summary>Registers the installed ExplorerBlurMica. Asks for administrator rights; Explorer must restart afterwards.</summary>
+    public async Task<EbmStatus> EnableAsync(CancellationToken ct = default)
+    {
+        ThrowOnFailure(await Elevation.RunAsync(["enable"], ct));
+        return GetStatus();
+    }
+
+    /// <summary>Unregisters ExplorerBlurMica, keeping its files. Asks for administrator rights; Explorer must restart afterwards.</summary>
+    public async Task<EbmStatus> DisableAsync(CancellationToken ct = default)
+    {
+        ThrowOnFailure(await Elevation.RunAsync(["disable"], ct));
         return GetStatus();
     }
 

@@ -1,0 +1,43 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows10.0.26100.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
+    <RootNamespace>ExplorerBlurMicaTray.App</RootNamespace>
+    <AssemblyName>ExplorerBlurMicaTray</AssemblyName>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets\app.ico</ApplicationIcon>
+    <UseWinUI>true</UseWinUI>
+    <WindowsPackageType>None</WindowsPackageType>
+    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+    <SelfContained>true</SelfContained>
+    <PublishAot>true</PublishAot>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <SatelliteResourceLanguages>en;ru</SatelliteResourceLanguages>
+    <!-- Program.Main runs elevated commands and the single-instance check before XAML starts. -->
+    <DefineConstants>$(DefineConstants);DISABLE_XAML_GENERATED_MAIN</DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Content Include="Assets\app.ico" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Assets\app.png" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The metapackage would add ~60 MB of AI and search runtimes the app does not use. -->
+    <PackageReference Include="Microsoft.WindowsAppSDK.WinUI" Version="2.3.9" />
+    <!-- WinUI 2.3.9 asks for 2.1.8, which was never published to nuget.org; pin the version that resolves. -->
+    <PackageReference Include="Microsoft.WindowsAppSDK.InteractiveExperiences" Version="2.1.9" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ExplorerBlurMicaTray.Core\ExplorerBlurMicaTray.Core.csproj" />
+  </ItemGroup>
+
+  <!-- Unpackaged publish leaves out the app's resources.pri (compiled XAML); without it the app crashes on start. -->
+  <Target Name="CopyAppPriToPublish" AfterTargets="Publish">
+    <Copy SourceFiles="$(OutDir)$(AssemblyName).pri" DestinationFolder="$(PublishDir)" />
+  </Target>
+
+</Project>

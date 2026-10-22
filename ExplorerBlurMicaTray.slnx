@@ -3,6 +3,9 @@
     <Platform Name="x64" />
   </Configurations>
   <Folder Name="/src/">
+    <Project Path="src/ExplorerBlurMicaTray.App/ExplorerBlurMicaTray.App.csproj">
+      <Platform Project="x64" />
+    </Project>
     <Project Path="src/ExplorerBlurMicaTray.Cli/ExplorerBlurMicaTray.Cli.csproj" />
     <Project Path="src/ExplorerBlurMicaTray.Core/ExplorerBlurMicaTray.Core.csproj" />
   </Folder>

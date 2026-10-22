@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-  Publishes the app with Native AOT and builds the Inno Setup installer into artifacts\.
+  Publishes the tray app and the ebmt tool with Native AOT and builds the Inno Setup installer into artifacts\.
 .EXAMPLE
   .\installer\build.ps1 -Version 0.1.0
 #>
@@ -11,6 +11,8 @@ param(
 $ErrorActionPreference = "Stop"
 $root = Split-Path $PSScriptRoot -Parent
 $publishDir = Join-Path $root "artifacts\publish"
+$cliDir = Join-Path $publishDir "cli"
+$appDir = Join-Path $publishDir "app"
 $outputDir = Join-Path $root "artifacts"
 
 # Native AOT links with MSVC and finds it through vswhere, which ships outside PATH.
@@ -33,10 +35,14 @@ if (Test-Path $publishDir) {
 }
 
 dotnet publish (Join-Path $root "src\ExplorerBlurMicaTray.Cli\ExplorerBlurMicaTray.Cli.csproj") `
-    -c Release -o $publishDir -p:Version=$Version -p:DebugType=none
-if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed" }
+    -c Release -o $cliDir -p:Version=$Version -p:DebugType=none
+if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed for ebmt" }
 
-& $iscc "/DAppVersion=$Version" "/DPublishDir=$publishDir" "/DOutputDir=$outputDir" `
+dotnet publish (Join-Path $root "src\ExplorerBlurMicaTray.App\ExplorerBlurMicaTray.App.csproj") `
+    -c Release -p:Platform=x64 -o $appDir -p:Version=$Version -p:DebugType=none
+if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed for the tray app" }
+
+& $iscc "/DAppVersion=$Version" "/DCliDir=$cliDir" "/DAppDir=$appDir" "/DOutputDir=$outputDir" `
     (Join-Path $PSScriptRoot "ExplorerBlurMicaTray.iss")
 if ($LASTEXITCODE -ne 0) { throw "ISCC failed" }
 
