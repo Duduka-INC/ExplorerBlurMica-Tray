@@ -63,6 +63,9 @@
                     <TextBlock x:Name="TintText" Grid.Column="2" Width="34" TextAlignment="Right"
                                VerticalAlignment="Center" Style="{StaticResource CaptionTextBlockStyle}" />
                 </Grid>
+                <!-- Why the tint is off for the picked material. -->
+                <TextBlock x:Name="TintHint" Style="{StaticResource CaptionTextBlockStyle}" TextWrapping="Wrap"
+                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" Visibility="Collapsed" />
             </StackPanel>
 
             <StackPanel x:Name="InstallPanel" Spacing="8">

@@ -125,7 +125,7 @@ public sealed partial class FlyoutWindow : Window
     private bool Installed => _status.State is EbmState.Enabled or EbmState.Disabled;
 
     private bool IsPending =>
-        _selected != _applied || (_selected != Material.Default && _selectedTint != _appliedTint);
+        _selected != _applied || (Materials.TintApplies(_selected) && _selectedTint != _appliedTint);
 
     public bool CanToggleDefault => Installed && !_busy;
 
@@ -283,21 +283,29 @@ public sealed partial class FlyoutWindow : Window
                 _materialButtons[i].IsEnabled = !_busy;
             }
 
+            bool tintApplies = Materials.TintApplies(_selected);
             TintSlider.Value = _selectedTint;
-            TintSlider.IsEnabled = _selected != Material.Default && !_busy;
-            TintText.Text = $"{_selectedTint}%";
+            TintSlider.IsEnabled = tintApplies && !_busy;
+            TintText.Text = tintApplies ? $"{_selectedTint}%" : "—";
+            TintHint.Text = _selected switch
+            {
+                Material.Blur => Strings.TintHintBlur,
+                Material.Mica or Material.MicaAlt => Strings.TintHintMica,
+                _ => "",
+            };
+            TintHint.Visibility = TintHint.Text.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
 
             bool pending = IsPending;
             ApplyButton.Content = _busy ? Strings.Applying : Strings.Apply;
             ApplyButton.IsEnabled = pending && !_busy;
             int preset = Array.FindIndex(Materials.BuiltInPresets,
-                p => p.Material == _selected && (p.Material == Material.Default || p.TintPercent == _selectedTint));
+                p => p.Material == _selected && (p.TintPercent is null || p.TintPercent == _selectedTint));
             for (int i = 0; i < _presetItems.Length; i++)
                 _presetItems[i].IsChecked = i == preset;
             PresetText.Text = preset >= 0 ? Materials.BuiltInPresets[preset].Name : Strings.PresetCustom;
             PresetButton.IsEnabled = !_busy;
 
-            BlendLayer.Background = installed && _selected != Material.Default
+            BlendLayer.Background = installed && tintApplies
                 ? new SolidColorBrush(ColorHelper.FromArgb(Materials.PercentToAlpha(_selectedTint), _blendColor.R, _blendColor.G, _blendColor.B))
                 : null;
 
@@ -351,10 +359,9 @@ public sealed partial class FlyoutWindow : Window
     {
         _selected = preset.Material;
         if (preset.Material != Material.Default)
-        {
-            _selectedTint = preset.TintPercent;
             _lastEffect = preset.Material;
-        }
+        if (preset.TintPercent is { } tint)
+            _selectedTint = tint;
         UpdateUi();
     }
 
@@ -493,6 +500,12 @@ public sealed partial class FlyoutWindow : Window
     {
         var config = LoadConfig();
         config.Effect = Materials.ToEffect(_selected);
+        if (!Materials.TintApplies(_selected))
+        {
+            // Keep the stored Acrylic tint for when the user comes back to Acrylic.
+            config.Save(_status.ConfigPath!);
+            return;
+        }
         byte alpha = Materials.PercentToAlpha(_selectedTint);
         if (SystemEffects.IsAppsLightTheme())
             config.Light = config.Light with { A = alpha };

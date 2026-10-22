@@ -12,7 +12,8 @@ public enum Material
     Blur,
 }
 
-public sealed record Preset(string Name, Material Material, int TintPercent);
+/// <summary>A built-in preset; <see cref="TintPercent"/> is null where the tint does not apply.</summary>
+public sealed record Preset(string Name, Material Material, int? TintPercent);
 
 internal static class Materials
 {
@@ -30,12 +31,18 @@ internal static class Materials
 
     public static readonly Preset[] BuiltInPresets =
     [
-        new("Default", Material.Default, 47),
+        new("Default", Material.Default, null),
         new("Стекло", Material.Acrylic, 47),
-        new("Mica", Material.Mica, 47),
-        new("Глубокий", Material.MicaAlt, 70),
-        new("Чистое размытие", Material.Blur, 0),
+        new("Mica", Material.Mica, null),
+        new("Глубокий", Material.MicaAlt, null),
+        new("Чистое размытие", Material.Blur, null),
     ];
+
+    /// <summary>
+    /// ExplorerBlurMica draws its blend color only for Acrylic: Blur (Clear) is untinted by design,
+    /// and Mica goes through a private DWM attribute that takes no color.
+    /// </summary>
+    public static bool TintApplies(Material material) => material == Material.Acrylic;
 
     public static Material FromEffect(EbmEffect effect) => effect switch
     {

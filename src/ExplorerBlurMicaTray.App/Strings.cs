@@ -19,6 +19,9 @@ internal static class Strings
         _ => $" · {count} окон Проводника",
     };
 
+    public const string TintHintBlur = "Blur рисуется без подкраски, затемнение на него не влияет.";
+    public const string TintHintMica = "Подкраску Mica задаёт Windows. На новых сборках Windows 11 эффект может не работать.";
+
     public const string Apply = "Применить";
     public const string Applying = "Применяю…";
     public const string PresetCustom = "Свой";
