@@ -30,6 +30,8 @@ public sealed partial class FlyoutWindow : Window
     private readonly HttpClient _http = EbmReleaseClient.CreateHttpClient();
     private readonly EbmInstaller _installer;
     private readonly ToggleButton[] _materialButtons;
+    private readonly RadioMenuFlyoutItem[] _presetItems;
+    private Windows.UI.Color _blendColor = ColorHelper.FromArgb(255, 0, 0, 0);
 
     private EbmStatus _status = new(EbmState.NotInstalled, null, null);
     private Material _applied = Material.Default;
@@ -83,9 +85,13 @@ public sealed partial class FlyoutWindow : Window
         InstallTitleText.Text = Strings.InstallTitle;
         InstallBodyText.Text = Strings.InstallBody;
         InstallNoteText.Text = Strings.InstallNote;
-        PresetBox.PlaceholderText = Strings.PresetCustom;
-        foreach (var preset in Materials.BuiltInPresets)
-            PresetBox.Items.Add(preset.Name);
+        _presetItems = Materials.BuiltInPresets.Select(preset =>
+        {
+            var item = new RadioMenuFlyoutItem { Text = preset.Name, GroupName = "presets" };
+            item.Click += (_, _) => OnPresetPicked(preset);
+            PresetMenu.Items.Add(item);
+            return item;
+        }).ToArray();
 
         _materialButtons = new ToggleButton[Materials.All.Length];
         for (int i = 0; i < Materials.All.Length; i++)
@@ -211,7 +217,13 @@ public sealed partial class FlyoutWindow : Window
         double height = Root.ActualHeight;
         if (height <= 0)
             return;
-        AppWindow.ResizeClient(new SizeInt32((int)Math.Ceiling(WidthDip * Scale), (int)Math.Ceiling(height * Scale)));
+        // ResizeClient sizes the window as if it still had a title bar, which leaves an empty strip
+        // under the content; size the outer window from the frame Windows actually draws instead.
+        var outer = AppWindow.Size;
+        var client = AppWindow.ClientSize;
+        AppWindow.Resize(new SizeInt32(
+            (int)Math.Ceiling(WidthDip * Scale) + outer.Width - client.Width,
+            (int)Math.Ceiling(height * Scale) + outer.Height - client.Height));
         if (AppWindow.IsVisible && !_preparing)
             PlaceAboveTray();
     }
@@ -236,7 +248,9 @@ public sealed partial class FlyoutWindow : Window
             var configured = Materials.FromEffect(config.Effect);
             _lastEffect = configured;
             _applied = _status.State == EbmState.Disabled ? Material.Default : configured;
-            _appliedTint = Materials.AlphaToPercent(CurrentBlend(config).A);
+            var blend = CurrentBlend(config);
+            _blendColor = ColorHelper.FromArgb(255, blend.R, blend.G, blend.B);
+            _appliedTint = Materials.AlphaToPercent(blend.A);
             _selected = _applied;
             _selectedTint = _appliedTint;
         }
@@ -276,9 +290,16 @@ public sealed partial class FlyoutWindow : Window
             bool pending = IsPending;
             ApplyButton.Content = _busy ? Strings.Applying : Strings.Apply;
             ApplyButton.IsEnabled = pending && !_busy;
-            PresetBox.SelectedIndex = Array.FindIndex(Materials.BuiltInPresets,
+            int preset = Array.FindIndex(Materials.BuiltInPresets,
                 p => p.Material == _selected && (p.Material == Material.Default || p.TintPercent == _selectedTint));
-            PresetBox.IsEnabled = !_busy;
+            for (int i = 0; i < _presetItems.Length; i++)
+                _presetItems[i].IsChecked = i == preset;
+            PresetText.Text = preset >= 0 ? Materials.BuiltInPresets[preset].Name : Strings.PresetCustom;
+            PresetButton.IsEnabled = !_busy;
+
+            BlendLayer.Background = installed && _selected != Material.Default
+                ? new SolidColorBrush(ColorHelper.FromArgb(Materials.PercentToAlpha(_selectedTint), _blendColor.R, _blendColor.G, _blendColor.B))
+                : null;
 
             (StatusText.Text, StatusDot.Fill) = (installed, pending, _applied) switch
             {
@@ -323,11 +344,11 @@ public sealed partial class FlyoutWindow : Window
         UpdateUi();
     }
 
-    private void OnPresetChanged(object sender, SelectionChangedEventArgs e)
+    private void OnPresetButton(object sender, RoutedEventArgs e) =>
+        PresetMenu.ShowAt(Root, new FlyoutShowOptions { Placement = FlyoutPlacementMode.LeftEdgeAlignedBottom });
+
+    private void OnPresetPicked(Preset preset)
     {
-        if (_updating || PresetBox.SelectedIndex < 0)
-            return;
-        var preset = Materials.BuiltInPresets[PresetBox.SelectedIndex];
         _selected = preset.Material;
         if (preset.Material != Material.Default)
         {
