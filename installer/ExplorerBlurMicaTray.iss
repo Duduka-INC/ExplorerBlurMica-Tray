@@ -56,6 +56,8 @@ OutputBaseFilename=ExplorerBlurMica-Tray-Setup-{#AppVersion}
 Compression=lzma2/max
 SolidCompression=yes
 SetupLogging=yes
+; The autostart entry is per user on purpose (see [Registry]).
+UsedUserAreasWarning=no
 
 [Languages]
 Name: "en"; MessagesFile: "compiler:Default.isl"
@@ -70,8 +72,8 @@ en.StatusRegistering=Registering ExplorerBlurMica...
 ru.StatusRegistering=Регистрация ExplorerBlurMica...
 en.RunRestartExplorer=Restart File Explorer to turn the effect on (the taskbar disappears for a moment)
 ru.RunRestartExplorer=Перезапустить Проводник, чтобы включить эффект (панель задач на секунду пропадёт)
-en.TaskAutostart=Start ExplorerBlurMica Tray with Windows (for all users)
-ru.TaskAutostart=Запускать ExplorerBlurMica Tray вместе с Windows (для всех пользователей)
+en.TaskAutostart=Start ExplorerBlurMica Tray with Windows
+ru.TaskAutostart=Запускать ExplorerBlurMica Tray вместе с Windows
 en.RunApp=Start ExplorerBlurMica Tray
 ru.RunApp=Запустить ExplorerBlurMica Tray
 en.EbmDownloadFailed=ExplorerBlurMica could not be downloaded:%n%1%n%nSetup will finish without it. You can install it later from the app.
@@ -93,9 +95,13 @@ Source: "..\LICENSE"; DestDir: "{app}"; DestName: "LICENSE.txt"; Flags: ignoreve
 Name: "{autoprograms}\ExplorerBlurMica Tray"; Filename: "{app}\{#AppExe}"
 
 [Registry]
-; ExplorerBlurMica is machine-wide, so the tray app starts for every account.
-Root: HKLM; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "ExplorerBlurMica Tray"; \
+; Autostart is per user, so the app's own switch (Autostart in the core) can turn it off without
+; administrator rights. The value name must match Autostart.ValueName.
+Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "ExplorerBlurMica Tray"; \
   ValueData: """{app}\{#AppExe}"""; Flags: uninsdeletevalue; Tasks: autostart
+; Version 0.1.0 started the app for every account from HKLM; that entry is gone now.
+Root: HKLM; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: none; ValueName: "ExplorerBlurMica Tray"; \
+  Flags: deletevalue
 ; The app speaks the language picked in Setup (read by Strings in the app).
 Root: HKLM; Subkey: "Software\ExplorerBlurMica-Tray"; ValueType: string; ValueName: "Language"; \
   ValueData: "{language}"; Flags: uninsdeletekey

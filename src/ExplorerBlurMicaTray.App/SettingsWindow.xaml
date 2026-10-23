@@ -40,9 +40,7 @@
             <Grid>
                 <local:EffectPage x:Name="EffectView" />
                 <local:PresetsPage x:Name="PresetsView" Visibility="Collapsed" />
-                <!-- General comes next. -->
-                <TextBlock x:Name="ComingSoonText" Visibility="Collapsed" Margin="40,24"
-                           Style="{StaticResource BodyTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                <local:GeneralPage x:Name="GeneralView" Visibility="Collapsed" />
             </Grid>
         </NavigationView>
     </Grid>

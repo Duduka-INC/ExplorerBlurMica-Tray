@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Microsoft.UI.Xaml;
 
 namespace ExplorerBlurMicaTray.App;
@@ -21,7 +22,13 @@ public partial class App : Application
         _flyout.SettingsRequested += ShowSettings;
         _tray = new TrayIcon(_flyout.Handle, Path.Combine(AppContext.BaseDirectory, "Assets", "app.ico"), Strings.AppName)
         {
-            LeftClick = _flyout.Toggle,
+            LeftClick = () =>
+            {
+                if (AppSettings.LeftClickOpensSettings)
+                    ShowSettings();
+                else
+                    _flyout.Toggle();
+            },
             BuildMenu = BuildMenu,
         };
         _flyout.Prepare();
@@ -45,6 +52,14 @@ public partial class App : Application
         }
         yield return TrayMenuItem.Separator;
         yield return new TrayMenuItem(Strings.MenuExit, Quit);
+    }
+
+    /// <summary>Starts a new instance, which waits for this one to exit, and exits. Used to switch the language.</summary>
+    public void Restart()
+    {
+        if (Environment.ProcessPath is { } exe)
+            Process.Start(new ProcessStartInfo(exe, Program.RestartArgument) { UseShellExecute = false })?.Dispose();
+        Quit();
     }
 
     private void Quit()

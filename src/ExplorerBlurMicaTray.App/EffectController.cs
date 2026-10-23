@@ -217,6 +217,36 @@ public sealed class EffectController : IDisposable
         Reload();
     }
 
+    /// <summary>
+    /// Unregisters and removes ExplorerBlurMica, then restarts Explorer so it drops the effect.
+    /// The app's own settings and presets stay.
+    /// </summary>
+    public async Task UninstallAsync()
+    {
+        if (Busy)
+            return;
+        Busy = true;
+        Error = null;
+        Raise();
+        try
+        {
+            await Installer.UninstallAsync();
+            await ExplorerWindows.RestartExplorerAsync();
+        }
+        catch (EbmException e) when (e.Error == EbmError.ElevationDeclined)
+        {
+        }
+        catch (Exception e)
+        {
+            Error = e.Message;
+        }
+        finally
+        {
+            Busy = false;
+        }
+        Reload();
+    }
+
     public async Task ReopenWindowsAsync()
     {
         try

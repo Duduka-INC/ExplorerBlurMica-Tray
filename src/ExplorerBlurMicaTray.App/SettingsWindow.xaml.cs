@@ -49,11 +49,11 @@ public sealed partial class SettingsWindow : Window
         NavEffect.Content = Strings.NavEffect;
         NavPresets.Content = Strings.NavPresets;
         NavGeneral.Content = Strings.NavGeneral;
-        ComingSoonText.Text = Strings.ComingSoon;
         Nav.SelectedItem = NavEffect;
 
         EffectView.Attach(effect);
         PresetsView.Attach(effect);
+        GeneralView.Attach(effect);
         _effect.Changed += () =>
         {
             if (AppWindow.IsVisible)
@@ -70,6 +70,8 @@ public sealed partial class SettingsWindow : Window
         EffectView.Refresh();
         if (PresetsView.Visibility == Visibility.Visible)
             PresetsView.Refresh();
+        if (GeneralView.Visibility == Visibility.Visible)
+            GeneralView.Refresh();
         AppWindow.Show();
         Activate();
         SetForegroundWindow(_handle);
@@ -106,11 +108,14 @@ public sealed partial class SettingsWindow : Window
     {
         bool effect = ReferenceEquals(args.SelectedItem, NavEffect);
         bool presets = ReferenceEquals(args.SelectedItem, NavPresets);
+        bool general = ReferenceEquals(args.SelectedItem, NavGeneral);
         EffectView.Visibility = effect ? Visibility.Visible : Visibility.Collapsed;
         PresetsView.Visibility = presets ? Visibility.Visible : Visibility.Collapsed;
-        ComingSoonText.Visibility = effect || presets ? Visibility.Collapsed : Visibility.Visible;
+        GeneralView.Visibility = general ? Visibility.Visible : Visibility.Collapsed;
         if (presets)
             PresetsView.Refresh();
+        if (general)
+            GeneralView.Refresh();
     }
 
     [LibraryImport("user32.dll")]

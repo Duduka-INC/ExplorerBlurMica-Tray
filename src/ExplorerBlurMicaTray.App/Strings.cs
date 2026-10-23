@@ -1,29 +1,23 @@
 using System.Globalization;
 using ExplorerBlurMicaTray.Core;
-using Microsoft.Win32;
 
 namespace ExplorerBlurMicaTray.App;
 
 /// <summary>
 /// User-facing text in Russian and English. The language is the user's own choice if set
 /// (HKCU), else the one picked in Setup (HKLM), else the Windows display language.
+/// It is read once at startup; changing it takes an app restart.
 /// </summary>
 internal static class Strings
 {
-    private const string SettingsKey = @"Software\ExplorerBlurMica-Tray";
-
-    public static bool Russian { get; } = DetectRussian();
-
-    private static bool DetectRussian()
+    public static bool Russian { get; } = AppSettings.Language switch
     {
-        foreach (var hive in new[] { Registry.CurrentUser, Registry.LocalMachine })
-        {
-            using var key = hive.OpenSubKey(SettingsKey);
-            if (key?.GetValue("Language") is string { Length: > 0 } language)
-                return language.Equals("ru", StringComparison.OrdinalIgnoreCase);
-        }
-        return CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "ru";
-    }
+        LanguageChoice.Russian => true,
+        LanguageChoice.English => false,
+        _ => SystemIsRussian,
+    };
+
+    public static bool SystemIsRussian => CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "ru";
 
     private static string T(string ru, string en) => Russian ? ru : en;
 
@@ -93,7 +87,6 @@ internal static class Strings
     public static string NavEffect => T("Эффект", "Effect");
     public static string NavPresets => T("Пресеты", "Presets");
     public static string NavGeneral => T("Общие", "General");
-    public static string ComingSoon => T("Этот раздел появится в следующей версии.", "This section is coming in the next version.");
     public static string Preview => T("Предпросмотр", "Preview");
     public static string MaterialTitle => T("Материал", "Material");
     public static string MaterialSubtitle => T("Фон окон Проводника", "Background of File Explorer windows");
@@ -173,6 +166,60 @@ internal static class Strings
     public static string DeletePresetTitle(string name) => T($"Удалить пресет «{name}»?", $"Delete the “{name}” preset?");
     public static string DeletePresetBody => T("Отменить удаление будет нельзя.", "This can't be undone.");
     public static string PresetsSaveError => T("Не удалось сохранить пресеты", "Couldn't save the presets");
+
+    // Settings → General
+    public static string AppSection => T("Приложение", "App");
+    public static string AutostartTitle => T("Запускать вместе с Windows", "Start with Windows");
+    public static string AutostartDesc => T("Иконка появится в трее после входа в систему", "The tray icon appears after you sign in");
+    public static string TrayIconTitle => T("Иконка на панели задач", "Icon on the taskbar");
+    public static string TrayIconDesc => T("Windows прячет новые иконки под стрелку. Чтобы иконка всегда была видна, включите ExplorerBlurMica Tray в списке «Другие значки в трее».",
+        "Windows hides new icons behind the arrow. To keep the icon visible, turn on ExplorerBlurMica Tray under \"Other system tray icons\".");
+    public static string OpenTaskbarSettings => T("Открыть параметры", "Open settings");
+    public static string LanguageTitle => T("Язык интерфейса", "Display language");
+    public static string LanguageDesc => T("Вступит в силу после перезапуска приложения", "Takes effect after the app restarts");
+    public static string LanguageSystem => T($"Как в Windows ({(SystemIsRussian ? "русский" : "английский")})",
+        $"Same as Windows ({(SystemIsRussian ? "Russian" : "English")})");
+    public static string RestartTitle => T("Язык сменится после перезапуска", "The language changes after a restart");
+    public static string RestartApp => T("Перезапустить", "Restart");
+    public static string LeftClickTitle => T("Левый клик по иконке в трее", "Left click on the tray icon");
+    public static string LeftClickDesc => T("Правый клик всегда открывает меню", "A right click always opens the menu");
+    public static string LeftClickFlyout => T("Мини-панель", "Quick panel");
+    public static string LeftClickSettings => T("Окно настроек", "Settings window");
+
+    public static string EbmStatusLine(EbmStatus status, bool effectOn) => status.State switch
+    {
+        EbmState.NotInstalled => T("Не установлен", "Not installed"),
+        EbmState.Broken => T("Повреждён: файл не найден", "Damaged: its file is missing"),
+        _ => T($"Установлен · версия {status.Version ?? "?"} · {(effectOn ? "эффект включён" : "Default, эффект выключен")}",
+            $"Installed · version {status.Version ?? "?"} · {(effectOn ? "effect on" : "Default, effect off")}"),
+    };
+    public static string EbmSource(string? folder) => folder is null
+        ? T("Официальный релиз Maplespe с GitHub", "The official Maplespe release from GitHub")
+        : T($"Официальный релиз Maplespe с GitHub · {folder}", $"The official Maplespe release from GitHub · {folder}");
+    public static string CheckUpdates => T("Проверить обновления", "Check for updates");
+    public static string Checking => T("Проверяю…", "Checking…");
+    public static string UpToDate => T("Установлена последняя версия", "You have the latest version");
+    public static string UpdateAvailable(string version) => T($"Доступна версия {version}", $"Version {version} is available");
+    public static string Update => T("Обновить", "Update");
+    public static string ReinstallTitle => T("Переустановить", "Reinstall");
+    public static string ReinstallDesc => T("Скачать заново и зарегистрировать. Windows попросит права администратора.",
+        "Download again and register. Windows will ask for administrator rights.");
+    public static string UninstallEbmTitle => T("Удалить ExplorerBlurMica", "Remove ExplorerBlurMica");
+    public static string UninstallEbmDesc => T("Проводник вернётся к обычному виду. Настройки и пресеты сохранятся.",
+        "File Explorer goes back to its usual look. Settings and presets are kept.");
+    public static string UninstallEbmConfirm => T("Удалить ExplorerBlurMica?", "Remove ExplorerBlurMica?");
+    public static string UninstallEbmConfirmBody => T("Проводник перезапустится, панель задач на секунду пропадёт. Windows попросит права администратора. Вернуть эффект можно будет из приложения.",
+        "File Explorer restarts and the taskbar disappears for a moment. Windows will ask for administrator rights. You can bring the effect back from the app.");
+    public static string Remove => T("Удалить", "Remove");
+    public static string Working => T("Подождите…", "Please wait…");
+
+    public static string AboutSection => T("О программе", "About");
+    public static string AboutVersion(string version) => T($"Версия {version} · лицензия MIT", $"Version {version} · MIT license");
+    public static string SourceCode => T("Исходный код", "Source code");
+    public static string CreditTitle => T("Эффекты делает ExplorerBlurMica от Maplespe", "The effects come from ExplorerBlurMica by Maplespe");
+    public static string CreditDesc => T("Это приложение только управляет его настройками. Если нравится результат, поставьте звезду оригинальному проекту.",
+        "This app only manages its settings. If you like the result, give the original project a star.");
+    public static string OpenProject => T("Открыть проект", "Open project");
 
     // The File Explorer window drawn in the preview
     public static string SketchFolder => T("Документы", "Documents");
