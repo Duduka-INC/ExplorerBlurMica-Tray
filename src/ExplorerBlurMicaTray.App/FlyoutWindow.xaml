@@ -58,7 +58,7 @@
                     <FontIcon Glyph="&#xE706;" FontSize="16" VerticalAlignment="Center" />
                     <Slider x:Name="TintSlider" Grid.Column="1" Minimum="0" Maximum="100" StepFrequency="1"
                             VerticalAlignment="Center" ValueChanged="OnTintChanged" />
-                    <TextBlock x:Name="TintText" Grid.Column="2" Width="34" TextAlignment="Right"
+                    <TextBlock x:Name="TintText" Grid.Column="2" MinWidth="34" TextAlignment="Right"
                                VerticalAlignment="Center" Style="{StaticResource CaptionTextBlockStyle}" />
                 </Grid>
                 <!-- Why the tint is off for the picked material. -->

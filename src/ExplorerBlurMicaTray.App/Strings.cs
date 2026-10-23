@@ -108,17 +108,24 @@ internal static class Strings
         _ => T("Blur: чистое размытие всего, что позади окна, без подкраски.", "Blur: a plain blur of everything behind the window, with no tint."),
     };
     public static string ColorsHeader => T("Цвет подложки", "Blend color");
-    public static string DarkTheme => T("Тёмная тема", "Dark theme");
-    public static string LightTheme => T("Светлая тема", "Light theme");
-    public static string BlendSubtitle => T("Цвет и непрозрачность подложки поверх эффекта", "Color and opacity drawn over the effect");
+    public static string BlendTitle(bool light) => light
+        ? T("Для светлой темы Windows", "For the Windows light theme")
+        : T("Для тёмной темы Windows", "For the Windows dark theme");
+    public static string BlendSystemSubtitle => T("Системный цвет, как у остальных окон Windows", "The system color, as in other Windows apps");
+    public static string BlendCustomSubtitle => T("Свой цвет поверх размытия. Плотность — насколько он закрывает фон.",
+        "Your color over the blur. Density is how much of the background it covers.");
+    public static string BlendColor => T("Цвет подложки", "Blend color");
+    public static string BlendDensity => T("Плотность", "Density");
+    public static string BlendSystem => T("Системный", "System");
     public static string AdvancedTitle => T("Дополнительно", "More options");
     public static string AdvancedSubtitle => T("Какие части окна Проводника делать прозрачными", "Which parts of File Explorer windows go transparent");
     public static string ClearAddressTitle => T("Прозрачная адресная строка", "Transparent address bar");
-    public static string ClearAddressDesc => T("Убирает фон у адресной строки и поиска", "Removes the background of the address and search boxes");
-    public static string ClearBarBgTitle => T("Прозрачные полосы прокрутки", "Transparent scroll bars");
-    public static string ClearBarBgDesc => T("Полосы рисуются заново и могут немного отличаться от системных", "Scroll bars are redrawn and may look slightly different from the system ones");
-    public static string ClearWinUIBgTitle => T("Прозрачная панель инструментов", "Transparent toolbar");
-    public static string ClearWinUIBgDesc => T("Для новой панели Проводника в Windows 11", "For the new File Explorer toolbar in Windows 11");
+    public static string ClearAddressDesc => T("Для классической адресной строки, как в Windows 10", "For the classic address bar, as in Windows 10");
+    public static string ClearBarBgTitle => T("Без фона под полосой прокрутки", "No background under scroll bars");
+    public static string ClearBarBgDesc => T("Убирает дорожку под ползунком. Ползунок рисуется заново и может немного отличаться от системного.",
+        "Removes the track under the thumb. The thumb is redrawn and may look slightly different from the system one.");
+    public static string ClearWinUIBgTitle => T("Прозрачная верхняя панель", "Transparent top bar");
+    public static string ClearWinUIBgDesc => T("Вкладки, адресная строка, поиск и панель команд", "Tabs, address bar, search and command bar");
     public static string ShowLineTitle => T("Линия-разделитель", "Divider line");
     public static string ShowLineDesc => T("Между деревом папок и списком файлов", "Between the folder tree and the file list");
     public static string PendingTitle => T("Изменения ещё не применены", "Changes not applied yet");
@@ -131,6 +138,26 @@ internal static class Strings
         ? T($"Окна Проводника переоткроются (открыто: {windows}).", $"File Explorer windows will reopen ({windows} open).")
         : T("Новые окна Проводника откроются уже с изменениями.", "New File Explorer windows will open with the changes.");
     public static string Discard => T("Отменить", "Discard");
+
+    // The File Explorer window drawn in the preview
+    public static string SketchFolder => T("Документы", "Documents");
+    public static string SketchThisPc => T("Этот компьютер", "This PC");
+    public static string SketchSearch => T("Поиск: Документы", "Search Documents");
+    public static string SketchNew => T("Создать", "New");
+    public static string SketchSort => T("Сортировать", "Sort");
+    public static string SketchView => T("Просмотреть", "View");
+    public static string[] SketchNav => Russian
+        ? ["Главная", "Рабочий стол", "Загрузки", "Документы", "Изображения", "Этот компьютер"]
+        : ["Home", "Desktop", "Downloads", "Documents", "Pictures", "This PC"];
+    public static string SketchName => T("Имя", "Name");
+    public static string SketchDate => T("Дата изменения", "Date modified");
+    public static string SketchType => T("Тип", "Type");
+    public static string SketchFolderType => T("Папка", "Folder");
+    public static string[] SketchFolders => Russian ? ["Проекты", "Работа", "Учёба"] : ["Projects", "Work", "Study"];
+    public static (string Name, string Type)[] SketchFiles => Russian
+        ? [("Заметки.txt", "Текстовый"), ("Отчёт.docx", "Документ"), ("Отпуск.jpg", "Изображение")]
+        : [("Notes.txt", "Text"), ("Report.docx", "Document"), ("Holiday.jpg", "Image")];
+    public static string SketchStatus => T("6 элементов", "6 items");
     public static string MenuReopen => T("Переоткрыть окна Проводника", "Reopen File Explorer windows");
     public static string MenuExit => T("Выход", "Exit");
 }

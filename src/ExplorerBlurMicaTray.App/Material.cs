@@ -87,6 +87,12 @@ internal static class Materials
         _ => EbmEffect.Acrylic,
     };
 
+    /// <summary>
+    /// With a fully transparent blend color ExplorerBlurMica keeps the system acrylic tint. The color
+    /// is the Windows acrylic tint of the theme, so raising the density from here starts neutral.
+    /// </summary>
+    public static BlendColor SystemBlend(bool light) => light ? new(252, 252, 252, 0) : new(44, 44, 44, 0);
+
     public static int AlphaToPercent(byte alpha) => (int)Math.Round(alpha / 255.0 * 100);
 
     public static byte PercentToAlpha(int percent) => (byte)Math.Round(Math.Clamp(percent, 0, 100) / 100.0 * 255);

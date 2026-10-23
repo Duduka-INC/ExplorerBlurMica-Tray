@@ -217,7 +217,8 @@ public sealed partial class FlyoutWindow : Window
             int tint = Materials.AlphaToPercent(draft.CurrentBlend.A);
             TintSlider.Value = tint;
             TintSlider.IsEnabled = tintApplies && !busy;
-            TintText.Text = tintApplies ? $"{tint}%" : "—";
+            // At zero ExplorerBlurMica keeps the system acrylic tint.
+            TintText.Text = !tintApplies ? "—" : tint == 0 ? Strings.BlendSystem : $"{tint}%";
             TintHint.Text = Materials.TintHint(draft.Material);
             TintHint.Visibility = TintHint.Text.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
 

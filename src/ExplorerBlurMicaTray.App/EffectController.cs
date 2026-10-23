@@ -28,7 +28,10 @@ public sealed record EffectSettings(
         || (Material != Material.Default
             && (ClearAddress != applied.ClearAddress || ClearBarBg != applied.ClearBarBg
                 || ClearWinUIBg != applied.ClearWinUIBg || ShowLine != applied.ShowLine))
-        || (Materials.TintApplies(Material) && (Dark != applied.Dark || Light != applied.Light));
+        || (Materials.TintApplies(Material) && (!SameLook(Dark, applied.Dark) || !SameLook(Light, applied.Light)));
+
+    // Any fully transparent blend color means the system tint, whatever its RGB.
+    private static bool SameLook(BlendColor a, BlendColor b) => a == b || (a.A == 0 && b.A == 0);
 
     /// <summary>Default leaves the configured effect alone, so leaving Default brings it back.</summary>
     public void WriteTo(EbmConfig config)
