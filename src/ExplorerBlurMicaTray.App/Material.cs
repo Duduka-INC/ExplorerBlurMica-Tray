@@ -13,7 +13,21 @@ public enum Material
 }
 
 /// <summary>A built-in preset; <see cref="TintPercent"/> is null where the tint does not apply.</summary>
-public sealed record Preset(string Name, Material Material, int? TintPercent);
+public sealed record Preset(string Name, Material Material, int? TintPercent)
+{
+    /// <summary>Sets the material and, where it applies, the tint of the current theme.</summary>
+    public EffectSettings ApplyTo(EffectSettings draft)
+    {
+        var result = draft with { Material = Material };
+        return TintPercent is { } tint
+            ? result.WithCurrentBlend(result.CurrentBlend with { A = Materials.PercentToAlpha(tint) })
+            : result;
+    }
+
+    public bool Matches(EffectSettings settings) =>
+        settings.Material == Material
+        && (TintPercent is not { } tint || Materials.PercentToAlpha(tint) == settings.CurrentBlend.A);
+}
 
 internal static class Materials
 {
@@ -43,6 +57,17 @@ internal static class Materials
     /// and Mica goes through a private DWM attribute that takes no color.
     /// </summary>
     public static bool TintApplies(Material material) => material == Material.Acrylic;
+
+    /// <summary>Why the tint is off for <paramref name="material"/>, or an empty string.</summary>
+    public static string TintHint(Material material) => material switch
+    {
+        Material.Blur => Strings.TintHintBlur,
+        Material.Mica or Material.MicaAlt => Strings.TintHintMica,
+        _ => "",
+    };
+
+    /// <summary>Index of the built-in preset <paramref name="settings"/> matches, or -1.</summary>
+    public static int MatchPreset(EffectSettings settings) => Array.FindIndex(BuiltInPresets, p => p.Matches(settings));
 
     public static Material FromEffect(EbmEffect effect) => effect switch
     {

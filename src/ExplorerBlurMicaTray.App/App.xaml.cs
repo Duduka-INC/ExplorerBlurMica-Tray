@@ -2,10 +2,12 @@ using Microsoft.UI.Xaml;
 
 namespace ExplorerBlurMicaTray.App;
 
-/// <summary>A tray-only app: no main window, just the tray icon, its flyout and its menu.</summary>
+/// <summary>A tray app: the tray icon, its flyout and menu, and the settings window on demand.</summary>
 public partial class App : Application
 {
+    private readonly EffectController _effect = new();
     private FlyoutWindow? _flyout;
+    private SettingsWindow? _settings;
     private TrayIcon? _tray;
 
     public App()
@@ -15,7 +17,8 @@ public partial class App : Application
 
     protected override void OnLaunched(LaunchActivatedEventArgs args)
     {
-        _flyout = new FlyoutWindow();
+        _flyout = new FlyoutWindow(_effect);
+        _flyout.SettingsRequested += ShowSettings;
         _tray = new TrayIcon(_flyout.Handle, Path.Combine(AppContext.BaseDirectory, "Assets", "app.ico"), Strings.AppName)
         {
             LeftClick = _flyout.Toggle,
@@ -24,22 +27,32 @@ public partial class App : Application
         _flyout.Prepare();
     }
 
+    private void ShowSettings()
+    {
+        // The window is created on first use and kept after it closes; it only hides.
+        _settings ??= new SettingsWindow(_effect);
+        _settings.ShowAndActivate();
+    }
+
     private IEnumerable<TrayMenuItem> BuildMenu()
     {
-        var flyout = _flyout!;
-        if (flyout.CanToggleDefault)
+        yield return new TrayMenuItem(Strings.OpenSettings, ShowSettings);
+        if (_effect.Installed && !_effect.Busy)
         {
-            yield return new TrayMenuItem(Strings.MenuDefault, flyout.ToggleDefaultFromMenu, flyout.IsDefaultApplied);
-            yield return new TrayMenuItem(Strings.MenuReopen, flyout.ReopenExplorerWindows);
-            yield return TrayMenuItem.Separator;
+            yield return new TrayMenuItem(Strings.MenuDefault, () => _ = _effect.ToggleDefaultAsync(),
+                _effect.Applied.Material == Material.Default);
+            yield return new TrayMenuItem(Strings.MenuReopen, () => _ = _effect.ReopenWindowsAsync());
         }
+        yield return TrayMenuItem.Separator;
         yield return new TrayMenuItem(Strings.MenuExit, Quit);
     }
 
     private void Quit()
     {
         _tray?.Dispose();
+        _settings?.CloseForExit();
         _flyout?.CloseForExit();
+        _effect.Dispose();
         Exit();
     }
 }

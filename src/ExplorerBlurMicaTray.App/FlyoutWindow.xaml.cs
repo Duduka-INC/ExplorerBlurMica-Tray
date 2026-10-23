@@ -27,32 +27,18 @@ public sealed partial class FlyoutWindow : Window
     private static readonly SolidColorBrush IdleDot = new(ColorHelper.FromArgb(255, 128, 128, 128));
     private static readonly SolidColorBrush PendingDot = new(ColorHelper.FromArgb(255, 96, 205, 255));
 
-    private readonly HttpClient _http = EbmReleaseClient.CreateHttpClient();
-    private readonly EbmInstaller _installer;
-    private readonly ToggleButton[] _materialButtons;
+    private readonly EffectController _effect;
     private readonly RadioMenuFlyoutItem[] _presetItems;
-    private Windows.UI.Color _blendColor = ColorHelper.FromArgb(255, 0, 0, 0);
-
-    private EbmStatus _status = new(EbmState.NotInstalled, null, null);
-    private Material _applied = Material.Default;
-    private Material _selected = Material.Default;
-    private Material _lastEffect = Material.Acrylic;
     private Material? _backdropMaterial;
-    private int _appliedTint = 47;
-    private int _selectedTint = 47;
-    private int _windowCount;
-    private bool _busy;
     private bool _updating;
     private bool _preparing;
     private bool _exiting;
     private long _hiddenAt;
 
-    public nint Handle { get; }
-
-    public FlyoutWindow()
+    public FlyoutWindow(EffectController effect)
     {
         InitializeComponent();
-        _installer = new EbmInstaller(new EbmReleaseClient(_http));
+        _effect = effect;
         Handle = WinRT.Interop.WindowNative.GetWindowHandle(this);
         Title = Strings.AppName;
 
@@ -75,67 +61,44 @@ public sealed partial class FlyoutWindow : Window
         };
         Activated += OnActivated;
         Root.SizeChanged += (_, _) => FitToContent();
-        ErrorBar.Closed += (_, _) => ErrorBar.Visibility = Visibility.Collapsed;
-        SetOpen(ErrorBar, false);
+        ErrorBar.Closed += (_, _) => _effect.ClearError();
 
         TitleText.Text = Strings.FlyoutTitle;
+        ToolTipService.SetToolTip(SettingsButton, Strings.OpenSettings);
         TransparencyBar.Title = Strings.TransparencyOffTitle;
         TransparencyBar.Message = Strings.TransparencyOffMessage;
         ColorSettingsButton.Content = Strings.OpenWindowsSettings;
         InstallTitleText.Text = Strings.InstallTitle;
         InstallBodyText.Text = Strings.InstallBody;
         InstallNoteText.Text = Strings.InstallNote;
+        MaterialPicker.SetSize(28, 12);
+        MaterialPicker.MaterialPicked += material => _effect.Edit(d => d with { Material = material });
         _presetItems = Materials.BuiltInPresets.Select(preset =>
         {
             var item = new RadioMenuFlyoutItem { Text = preset.Name, GroupName = "presets" };
-            item.Click += (_, _) => OnPresetPicked(preset);
+            item.Click += (_, _) => _effect.Edit(preset.ApplyTo);
             PresetMenu.Items.Add(item);
             return item;
         }).ToArray();
 
-        _materialButtons = new ToggleButton[Materials.All.Length];
-        for (int i = 0; i < Materials.All.Length; i++)
+        _effect.Changed += () =>
         {
-            var material = Materials.All[i];
-            var button = new ToggleButton
-            {
-                Content = Materials.Label(material),
-                HorizontalAlignment = HorizontalAlignment.Stretch,
-                Height = 28,
-                Padding = new Thickness(0),
-                FontSize = 12,
-            };
-            // Checked/Unchecked, not Click, so keyboard and UI Automation toggles count too.
-            button.Checked += (_, _) =>
-            {
-                if (!_updating)
-                    OnMaterialPicked(material);
-            };
-            button.Unchecked += (_, _) =>
-            {
-                if (!_updating)
-                    UpdateUi();
-            };
-            Grid.SetColumn(button, i);
-            MaterialGrid.Children.Add(button);
-            _materialButtons[i] = button;
-        }
+            if (AppWindow.IsVisible || _preparing)
+                UpdateUi();
+        };
     }
 
-    private bool Installed => _status.State is EbmState.Enabled or EbmState.Disabled;
+    public nint Handle { get; }
 
-    private bool IsPending =>
-        _selected != _applied || (Materials.TintApplies(_selected) && _selectedTint != _appliedTint);
-
-    public bool CanToggleDefault => Installed && !_busy;
-
-    public bool IsDefaultApplied => _applied == Material.Default;
+    /// <summary>Raised by the gear button.</summary>
+    public event Action? SettingsRequested;
 
     /// <summary>Lays the window out once off-screen, so the first click shows it at its real size.</summary>
     public void Prepare()
     {
         _preparing = true;
-        Refresh();
+        _effect.Reload();
+        UpdateUi();
         AppWindow.Move(new PointInt32(-32000, -32000));
         AppWindow.Show(activateWindow: false);
         DispatcherQueue.TryEnqueue(DispatcherQueuePriority.Low, () =>
@@ -157,43 +120,22 @@ public sealed partial class FlyoutWindow : Window
         ShowFlyout();
     }
 
-    public void ToggleDefaultFromMenu()
-    {
-        if (!CanToggleDefault)
-            return;
-        _selected = _applied == Material.Default ? _lastEffect : Material.Default;
-        _selectedTint = _appliedTint;
-        _ = ApplyAsync();
-    }
-
-    public async void ReopenExplorerWindows()
-    {
-        try
-        {
-            await ExplorerWindows.ReopenAsync();
-        }
-        catch (Exception e)
-        {
-            ShowError(e.Message);
-        }
-    }
-
     public void CloseForExit()
     {
         _exiting = true;
-        _http.Dispose();
         Close();
     }
 
     private void ShowFlyout()
     {
-        Refresh();
+        _effect.Reload();
+        UpdateUi();
         FitToContent();
         PlaceAboveTray();
         AppWindow.Show();
         Activate();
         SetForegroundWindow(Handle);
-        _ = UpdateWindowCountAsync();
+        _ = _effect.RefreshWindowCountAsync();
     }
 
     private void HideFlyout()
@@ -238,26 +180,6 @@ public sealed partial class FlyoutWindow : Window
         AppWindow.Move(new PointInt32(area.X + area.Width - size.Width - margin, area.Y + area.Height - size.Height - margin));
     }
 
-    /// <summary>Reads the installed state and config again; unapplied changes are dropped.</summary>
-    private void Refresh()
-    {
-        _status = _installer.GetStatus();
-        if (Installed && !_busy)
-        {
-            var config = LoadConfig();
-            var configured = Materials.FromEffect(config.Effect);
-            _lastEffect = configured;
-            _applied = _status.State == EbmState.Disabled ? Material.Default : configured;
-            var blend = CurrentBlend(config);
-            _blendColor = ColorHelper.FromArgb(255, blend.R, blend.G, blend.B);
-            _appliedTint = Materials.AlphaToPercent(blend.A);
-            _selected = _applied;
-            _selectedTint = _appliedTint;
-        }
-        SetOpen(TransparencyBar, !SystemEffects.IsTransparencyEnabled() || SystemEffects.IsEnergySaverOn());
-        UpdateUi();
-    }
-
     // A closed InfoBar still takes a StackPanel slot and its spacing; collapse it as well.
     private static void SetOpen(InfoBar bar, bool open)
     {
@@ -267,62 +189,84 @@ public sealed partial class FlyoutWindow : Window
 
     private void UpdateUi()
     {
+        if (_updating)
+            return;
         _updating = true;
         try
         {
-            bool installed = Installed;
+            var effect = _effect;
+            var draft = effect.Draft;
+            bool installed = effect.Installed;
+            bool busy = effect.Busy;
+
+            SetOpen(TransparencyBar, effect.TransparencyOff);
+            ErrorBar.Title = Strings.ErrorTitle;
+            ErrorBar.Message = effect.Error ?? "";
+            SetOpen(ErrorBar, effect.Error is not null);
+
             EffectPanel.Visibility = installed ? Visibility.Visible : Visibility.Collapsed;
             Footer.Visibility = installed ? Visibility.Visible : Visibility.Collapsed;
             InstallPanel.Visibility = installed ? Visibility.Collapsed : Visibility.Visible;
-            InstallButton.Content = _status.State == EbmState.Broken ? Strings.ReinstallButton : Strings.InstallButton;
-            InstallButton.IsEnabled = !_busy;
+            InstallButton.Content = effect.Status.State == EbmState.Broken ? Strings.ReinstallButton : Strings.InstallButton;
+            InstallButton.IsEnabled = !busy;
+            ShowInstallProgress(effect.InstallProgress);
 
-            for (int i = 0; i < _materialButtons.Length; i++)
-            {
-                _materialButtons[i].IsChecked = Materials.All[i] == _selected;
-                _materialButtons[i].IsEnabled = !_busy;
-            }
+            MaterialPicker.Show(draft.Material, !busy);
 
-            bool tintApplies = Materials.TintApplies(_selected);
-            TintSlider.Value = _selectedTint;
-            TintSlider.IsEnabled = tintApplies && !_busy;
-            TintText.Text = tintApplies ? $"{_selectedTint}%" : "—";
-            TintHint.Text = _selected switch
-            {
-                Material.Blur => Strings.TintHintBlur,
-                Material.Mica or Material.MicaAlt => Strings.TintHintMica,
-                _ => "",
-            };
+            bool tintApplies = Materials.TintApplies(draft.Material);
+            int tint = Materials.AlphaToPercent(draft.CurrentBlend.A);
+            TintSlider.Value = tint;
+            TintSlider.IsEnabled = tintApplies && !busy;
+            TintText.Text = tintApplies ? $"{tint}%" : "—";
+            TintHint.Text = Materials.TintHint(draft.Material);
             TintHint.Visibility = TintHint.Text.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
 
-            bool pending = IsPending;
-            ApplyButton.Content = _busy ? Strings.Applying : Strings.Apply;
-            ApplyButton.IsEnabled = pending && !_busy;
-            int preset = Array.FindIndex(Materials.BuiltInPresets,
-                p => p.Material == _selected && (p.TintPercent is null || p.TintPercent == _selectedTint));
+            bool pending = effect.IsPending;
+            ApplyButton.Content = busy ? Strings.Applying : Strings.Apply;
+            ApplyButton.IsEnabled = pending && !busy;
+            int preset = Materials.MatchPreset(draft);
             for (int i = 0; i < _presetItems.Length; i++)
                 _presetItems[i].IsChecked = i == preset;
             PresetText.Text = preset >= 0 ? Materials.BuiltInPresets[preset].Name : Strings.PresetCustom;
-            PresetButton.IsEnabled = !_busy;
+            PresetButton.IsEnabled = !busy;
 
+            var blend = draft.CurrentBlend;
             BlendLayer.Background = installed && tintApplies
-                ? new SolidColorBrush(ColorHelper.FromArgb(Materials.PercentToAlpha(_selectedTint), _blendColor.R, _blendColor.G, _blendColor.B))
+                ? new SolidColorBrush(ColorHelper.FromArgb(blend.A, blend.R, blend.G, blend.B))
                 : null;
 
-            (StatusText.Text, StatusDot.Fill) = (installed, pending, _applied) switch
+            (StatusText.Text, StatusDot.Fill) = (installed, pending, effect.Applied.Material) switch
             {
-                (false, _, _) => (_status.State == EbmState.Broken ? Strings.StatusBroken : Strings.StatusNotInstalled, IdleDot),
+                (false, _, _) => (effect.Status.State == EbmState.Broken ? Strings.StatusBroken : Strings.StatusNotInstalled, IdleDot),
                 (true, true, _) => (Strings.StatusPending, PendingDot),
                 (true, false, Material.Default) => (Strings.StatusDefault, IdleDot),
-                _ => (Strings.StatusActive + Strings.StatusWindows(_windowCount), ActiveDot),
+                _ => (Strings.StatusActive + Strings.StatusWindows(effect.WindowCount), ActiveDot),
             };
 
-            SetBackdrop(installed ? _selected : Material.Acrylic);
+            SetBackdrop(installed ? draft.Material : Material.Acrylic);
         }
         finally
         {
             _updating = false;
         }
+    }
+
+    private void ShowInstallProgress(EbmInstallProgress? progress)
+    {
+        var visibility = progress is null ? Visibility.Collapsed : Visibility.Visible;
+        InstallProgress.Visibility = visibility;
+        InstallStatusText.Visibility = visibility;
+        if (progress is null)
+            return;
+        InstallStatusText.Text = progress.Step switch
+        {
+            EbmInstallStep.CheckingRelease => Strings.InstallChecking,
+            EbmInstallStep.Downloading => Strings.InstallDownloading,
+            _ => Strings.InstallRegistering,
+        };
+        InstallProgress.IsIndeterminate = progress.Fraction is null;
+        if (progress.Fraction is { } fraction)
+            InstallProgress.Value = fraction * 100;
     }
 
     private void SetBackdrop(Material material)
@@ -336,189 +280,31 @@ public sealed partial class FlyoutWindow : Window
             : new SolidColorBrush(Colors.Transparent);
     }
 
-    private void OnMaterialPicked(Material material)
-    {
-        _selected = material;
-        if (material != Material.Default)
-            _lastEffect = material;
-        UpdateUi();
-    }
-
     private void OnTintChanged(object sender, RangeBaseValueChangedEventArgs e)
     {
         if (_updating)
             return;
-        _selectedTint = (int)Math.Round(e.NewValue);
-        UpdateUi();
+        byte alpha = Materials.PercentToAlpha((int)Math.Round(e.NewValue));
+        _effect.Edit(d => d.WithCurrentBlend(d.CurrentBlend with { A = alpha }));
     }
 
     private void OnPresetButton(object sender, RoutedEventArgs e) =>
         PresetMenu.ShowAt(Root, new FlyoutShowOptions { Placement = FlyoutPlacementMode.LeftEdgeAlignedBottom });
 
-    private void OnPresetPicked(Preset preset)
+    private void OnApply(object sender, RoutedEventArgs e) => _ = _effect.ApplyAsync();
+
+    private void OnInstall(object sender, RoutedEventArgs e) => _ = _effect.InstallAsync();
+
+    private void OnOpenSettings(object sender, RoutedEventArgs e)
     {
-        _selected = preset.Material;
-        if (preset.Material != Material.Default)
-            _lastEffect = preset.Material;
-        if (preset.TintPercent is { } tint)
-            _selectedTint = tint;
-        UpdateUi();
-    }
-
-    private void OnApply(object sender, RoutedEventArgs e) => _ = ApplyAsync();
-
-    /// <summary>
-    /// Material and tint changes go to config.ini and need reopened windows. Switching to or from
-    /// Default (un)registers ExplorerBlurMica, which asks for administrator rights and restarts Explorer.
-    /// </summary>
-    private async Task ApplyAsync()
-    {
-        if (_busy || !IsPending)
-            return;
-        _busy = true;
-        SetOpen(ErrorBar, false);
-        UpdateUi();
-        try
-        {
-            bool wasDefault = _applied == Material.Default;
-            bool toDefault = _selected == Material.Default;
-            if (!toDefault)
-                SaveConfig();
-
-            if (wasDefault != toDefault)
-            {
-                _status = toDefault ? await _installer.DisableAsync() : await _installer.EnableAsync();
-                await ExplorerWindows.RestartExplorerAsync();
-            }
-            else if (!toDefault)
-            {
-                await ExplorerWindows.ReopenAsync();
-            }
-
-            _applied = _selected;
-            _appliedTint = _selectedTint;
-        }
-        catch (EbmException e) when (e.Error == EbmError.ElevationDeclined)
-        {
-            // The user said no to UAC; keep their selection so they can try again.
-        }
-        catch (Exception e)
-        {
-            ShowError(e.Message);
-        }
-        finally
-        {
-            _busy = false;
-            UpdateUi();
-            _ = UpdateWindowCountAsync();
-        }
-    }
-
-    private async void OnInstall(object sender, RoutedEventArgs e)
-    {
-        if (_busy)
-            return;
-        _busy = true;
-        SetOpen(ErrorBar, false);
-        InstallProgress.Visibility = Visibility.Visible;
-        InstallStatusText.Visibility = Visibility.Visible;
-        UpdateUi();
-
-        var progress = new Progress<EbmInstallProgress>(p =>
-        {
-            InstallStatusText.Text = p.Step switch
-            {
-                EbmInstallStep.CheckingRelease => Strings.InstallChecking,
-                EbmInstallStep.Downloading => Strings.InstallDownloading,
-                _ => Strings.InstallRegistering,
-            };
-            InstallProgress.IsIndeterminate = p.Fraction is null;
-            if (p.Fraction is { } fraction)
-                InstallProgress.Value = fraction * 100;
-        });
-
-        try
-        {
-            await _installer.InstallLatestAsync(progress);
-            InstallStatusText.Text = Strings.InstallRestarting;
-            InstallProgress.IsIndeterminate = true;
-            await ExplorerWindows.RestartExplorerAsync();
-        }
-        catch (EbmException ex) when (ex.Error == EbmError.ElevationDeclined)
-        {
-        }
-        catch (Exception ex)
-        {
-            ShowError(ex.Message);
-        }
-        finally
-        {
-            _busy = false;
-            InstallProgress.Visibility = Visibility.Collapsed;
-            InstallStatusText.Visibility = Visibility.Collapsed;
-            Refresh();
-        }
+        HideFlyout();
+        SettingsRequested?.Invoke();
     }
 
     private void OnOpenColorSettings(object sender, RoutedEventArgs e)
     {
         Process.Start(new ProcessStartInfo(SystemEffects.TransparencySettingsUri.ToString()) { UseShellExecute = true })?.Dispose();
         HideFlyout();
-    }
-
-    private async Task UpdateWindowCountAsync()
-    {
-        try
-        {
-            _windowCount = await Task.Run(ExplorerWindows.CountWindows);
-            if (!_busy)
-                UpdateUi();
-        }
-        catch (Exception)
-        {
-            // The count is only decoration for the status line.
-        }
-    }
-
-    private EbmConfig LoadConfig()
-    {
-        try
-        {
-            return EbmConfig.Load(_status.ConfigPath!);
-        }
-        catch (Exception e) when (e is IOException or UnauthorizedAccessException or ArgumentNullException)
-        {
-            return new EbmConfig();
-        }
-    }
-
-    private static BlendColor CurrentBlend(EbmConfig config) =>
-        SystemEffects.IsAppsLightTheme() ? config.Light : config.Dark;
-
-    /// <summary>Writes the material and the tint for the theme Windows is in now.</summary>
-    private void SaveConfig()
-    {
-        var config = LoadConfig();
-        config.Effect = Materials.ToEffect(_selected);
-        if (!Materials.TintApplies(_selected))
-        {
-            // Keep the stored Acrylic tint for when the user comes back to Acrylic.
-            config.Save(_status.ConfigPath!);
-            return;
-        }
-        byte alpha = Materials.PercentToAlpha(_selectedTint);
-        if (SystemEffects.IsAppsLightTheme())
-            config.Light = config.Light with { A = alpha };
-        else
-            config.Dark = config.Dark with { A = alpha };
-        config.Save(_status.ConfigPath!);
-    }
-
-    private void ShowError(string message)
-    {
-        ErrorBar.Title = Strings.ErrorTitle;
-        ErrorBar.Message = message;
-        SetOpen(ErrorBar, true);
     }
 
     private struct Point
