@@ -21,8 +21,12 @@ public sealed class PresetLibrary
 
     public IEnumerable<Preset> All => Materials.BuiltInPresets.Concat<Preset>(_custom);
 
-    /// <summary>The first preset that looks like <paramref name="settings"/>, built-in ones first.</summary>
-    public Preset? Match(EffectSettings settings) => All.FirstOrDefault(p => p.Matches(settings));
+    /// <summary>
+    /// The preset that looks like <paramref name="settings"/>. The user's own come first: they
+    /// match every setting, while a built-in one matches any look with its material (and density).
+    /// </summary>
+    public Preset? Match(EffectSettings settings) =>
+        (Preset?)_custom.FirstOrDefault(p => p.Matches(settings)) ?? Materials.BuiltInPresets.FirstOrDefault(p => p.Matches(settings));
 
     /// <summary>Why <paramref name="name"/> can't be used, or null if it can.</summary>
     public string? Check(string name, Preset? renaming = null)

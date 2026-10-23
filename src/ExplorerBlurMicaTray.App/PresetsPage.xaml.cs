@@ -65,11 +65,11 @@ public sealed partial class PresetsPage : UserControl
         SaveButton.IsEnabled = effect.Installed;
         EmptyHint.Visibility = effect.Presets.Custom.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
 
-        // The applied look is marked; the first preset that matches it wins, as in the flyout.
-        var active = effect.Installed ? effect.Presets.Match(effect.Applied) : null;
+        // Every preset that gives the applied look is marked active. Applying one of them would
+        // change nothing, so none of them offers Apply.
         Tiles.Children.Clear();
         foreach (var preset in effect.Presets.All)
-            Tiles.Children.Add(Tile(preset, ReferenceEquals(preset, active), effect));
+            Tiles.Children.Add(Tile(preset, effect.Installed && preset.Matches(effect.Applied), effect));
         _columns = 0;
         Arrange();
     }
@@ -148,6 +148,7 @@ public sealed partial class PresetsPage : UserControl
                 IsEnabled = effect.Installed && !effect.Busy,
             };
             apply.Click += (_, _) => Apply(preset);
+            Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(apply, $"{Strings.Apply}: {preset.Name}");
             Grid.SetColumn(apply, 1);
             actions.Children.Add(apply);
         }
