@@ -6,6 +6,18 @@ ExplorerBlurMica adds Blur, Acrylic and Mica backgrounds to Windows File Explore
 
 > **All visual effects are made by ExplorerBlurMica.** This project does not modify, rebuild or redistribute ExplorerBlurMica. It downloads the official release from the author's GitHub page and only manages its configuration. If you like the effect, please star [the original project](https://github.com/Maplespe/ExplorerBlurMica).
 
+![File Explorer with the Blur effect next to the settings window](docs/screenshots/explorer-and-settings.png)
+
+## Screenshots
+
+<p align="center">
+  <img src="docs/screenshots/tray.png" width="320" alt="The tray panel: material, blend density, preset and Apply">
+</p>
+
+| Effect | Presets |
+| --- | --- |
+| ![Settings, Effect page: preview, material and extra options](docs/screenshots/effect.png) | ![Settings, Presets page: built-in and custom presets](docs/screenshots/presets.png) |
+
 ## Download
 
 Get `ExplorerBlurMica-Tray-Setup-<version>.exe` from [Releases](https://github.com/Duduka-INC/ExplorerBlurMica-Tray/releases) and run it. Setup asks for administrator rights once, downloads the official ExplorerBlurMica release, checks its SHA-256, registers it and restarts File Explorer.
