@@ -179,18 +179,21 @@ public sealed partial class EffectPage : UserControl
     }
 
     /// <summary>
-    /// ExplorerBlurMica keeps the system acrylic when the blend color is fully transparent. Otherwise
-    /// the color covers the blur by its alpha, with the acrylic's own luminosity left on, which is
-    /// why black at full density still comes out dark grey in Explorer.
+    /// ExplorerBlurMica keeps the system acrylic when the blend color is fully transparent, and a low
+    /// density looks almost the same in Explorer. So the preview starts from the system tint and
+    /// moves toward the blend color as the density grows, without a jump between 0% and 1%.
     /// </summary>
-    private static AcrylicBrush Acrylic(BlendColor blend, Color solid) => blend.A == 0
-        ? new AcrylicBrush { TintColor = solid, TintOpacity = 0.6, FallbackColor = solid }
-        : new AcrylicBrush
+    private static AcrylicBrush Acrylic(BlendColor blend, Color solid)
+    {
+        double t = blend.A / 255.0;
+        byte Mix(byte from, byte to) => (byte)Math.Round(from + (to - from) * t);
+        return new AcrylicBrush
         {
-            TintColor = ColorHelper.FromArgb(255, blend.R, blend.G, blend.B),
-            TintOpacity = blend.A / 255.0,
+            TintColor = ColorHelper.FromArgb(255, Mix(solid.R, blend.R), Mix(solid.G, blend.G), Mix(solid.B, blend.B)),
+            TintOpacity = 0.6 + 0.3 * t,
             FallbackColor = solid,
         };
+    }
 
     private void FitPreview()
     {
