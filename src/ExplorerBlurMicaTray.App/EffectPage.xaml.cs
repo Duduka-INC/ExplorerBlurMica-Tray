@@ -5,10 +5,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Media;
-using Microsoft.UI.Xaml.Media.Imaging;
-using Microsoft.Win32;
 using Windows.Foundation;
-using Windows.UI;
 
 namespace ExplorerBlurMicaTray.App;
 
@@ -152,47 +149,17 @@ public sealed partial class EffectPage : UserControl
         bar.Visibility = open ? Visibility.Visible : Visibility.Collapsed;
     }
 
-    /// <summary>
-    /// In-app acrylic blurs whatever is behind it in this window, which is close to what each
-    /// material does to Explorer: Acrylic and Blur show the window behind, Mica only the wallpaper.
-    /// </summary>
     private void UpdatePreview(EffectSettings draft)
     {
-        Color solid = SystemEffects.IsAppsLightTheme() ? ColorHelper.FromArgb(255, 243, 243, 243) : ColorHelper.FromArgb(255, 32, 32, 32);
-        Brush backdrop = draft.Material switch
-        {
-            Material.Default => new SolidColorBrush(solid),
-            Material.Acrylic => Acrylic(draft.CurrentBlend, solid),
-            Material.Blur => new AcrylicBrush { TintColor = solid, TintOpacity = 0, TintLuminosityOpacity = 0, FallbackColor = solid },
-            Material.MicaAlt => new AcrylicBrush { TintColor = solid, TintOpacity = 0.45, TintLuminosityOpacity = 0.3, FallbackColor = solid },
-            _ => new AcrylicBrush { TintColor = solid, TintOpacity = 0.75, TintLuminosityOpacity = 0.6, FallbackColor = solid },
-        };
         // Default is the plain Explorer: ExplorerBlurMica is off, so the options don't apply either.
         bool plain = draft.Material == Material.Default;
         bool clearTop = ExplorerUi.HasWinUIToolbar ? draft.ClearWinUIBg : draft.ClearAddress;
         MiniWindow.Show(
-            backdrop,
+            PreviewArt.Backdrop(draft),
             mica: draft.Material is Material.Mica or Material.MicaAlt,
             opaqueTop: plain || !clearTop,
             scrollTrack: plain || !draft.ClearBarBg,
             divider: !plain && draft.ShowLine);
-    }
-
-    /// <summary>
-    /// ExplorerBlurMica keeps the system acrylic when the blend color is fully transparent, and a low
-    /// density looks almost the same in Explorer. So the preview starts from the system tint and
-    /// moves toward the blend color as the density grows, without a jump between 0% and 1%.
-    /// </summary>
-    private static AcrylicBrush Acrylic(BlendColor blend, Color solid)
-    {
-        double t = blend.A / 255.0;
-        byte Mix(byte from, byte to) => (byte)Math.Round(from + (to - from) * t);
-        return new AcrylicBrush
-        {
-            TintColor = ColorHelper.FromArgb(255, Mix(solid.R, blend.R), Mix(solid.G, blend.G), Mix(solid.B, blend.B)),
-            TintOpacity = 0.6 + 0.3 * t,
-            FallbackColor = solid,
-        };
     }
 
     private void FitPreview()
@@ -208,37 +175,14 @@ public sealed partial class EffectPage : UserControl
 
     private async Task LoadWallpaperAsync()
     {
-        if (FindWallpaper() is not { } path)
-            return;
-        try
-        {
-            var bitmap = new BitmapImage { DecodePixelWidth = 1280 };
-            using var file = File.OpenRead(path);
-            using var stream = file.AsRandomAccessStream();
-            await bitmap.SetSourceAsync(stream);
-            WallpaperImage.Source = bitmap;
-            MiniWindow.MicaWallpaper.Source = bitmap;
-        }
-        catch (Exception)
-        {
-            // Without a readable wallpaper the preview keeps its plain background.
-        }
-    }
-
-    /// <summary>Windows keeps a copy of the current wallpaper, slideshows and Spotlight included.</summary>
-    private static string? FindWallpaper()
-    {
-        string transcoded = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Microsoft", "Windows", "Themes", "TranscodedWallpaper");
-        if (File.Exists(transcoded))
-            return transcoded;
-        using var key = Registry.CurrentUser.OpenSubKey(@"Control Panel\Desktop");
-        return key?.GetValue("WallPaper") is string { Length: > 0 } path && File.Exists(path) ? path : null;
+        var bitmap = await PreviewArt.WallpaperAsync();
+        WallpaperImage.Source = bitmap;
+        MiniWindow.MicaWallpaper.Source = bitmap;
     }
 
     private void AutomationNames()
     {
-        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(BlendSwatch, Strings.BlendColor);
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(BlendSwatch, Strings.BlendColorName);
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(BlendSlider, Strings.BlendDensity);
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(ClearAddressSwitch, Strings.ClearAddressTitle);
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(ClearBarBgSwitch, Strings.ClearBarBgTitle);

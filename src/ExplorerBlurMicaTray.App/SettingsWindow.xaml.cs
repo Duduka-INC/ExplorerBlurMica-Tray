@@ -53,6 +53,7 @@ public sealed partial class SettingsWindow : Window
         Nav.SelectedItem = NavEffect;
 
         EffectView.Attach(effect);
+        PresetsView.Attach(effect);
         _effect.Changed += () =>
         {
             if (AppWindow.IsVisible)
@@ -67,6 +68,8 @@ public sealed partial class SettingsWindow : Window
             CenterOnScreen();
         UpdateBackdrop();
         EffectView.Refresh();
+        if (PresetsView.Visibility == Visibility.Visible)
+            PresetsView.Refresh();
         AppWindow.Show();
         Activate();
         SetForegroundWindow(_handle);
@@ -102,8 +105,12 @@ public sealed partial class SettingsWindow : Window
     private void OnNavigate(NavigationView sender, NavigationViewSelectionChangedEventArgs args)
     {
         bool effect = ReferenceEquals(args.SelectedItem, NavEffect);
+        bool presets = ReferenceEquals(args.SelectedItem, NavPresets);
         EffectView.Visibility = effect ? Visibility.Visible : Visibility.Collapsed;
-        ComingSoonText.Visibility = effect ? Visibility.Collapsed : Visibility.Visible;
+        PresetsView.Visibility = presets ? Visibility.Visible : Visibility.Collapsed;
+        ComingSoonText.Visibility = effect || presets ? Visibility.Collapsed : Visibility.Visible;
+        if (presets)
+            PresetsView.Refresh();
     }
 
     [LibraryImport("user32.dll")]

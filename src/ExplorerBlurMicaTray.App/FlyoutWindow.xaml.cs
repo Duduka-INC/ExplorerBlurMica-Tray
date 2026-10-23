@@ -28,7 +28,8 @@ public sealed partial class FlyoutWindow : Window
     private static readonly SolidColorBrush PendingDot = new(ColorHelper.FromArgb(255, 96, 205, 255));
 
     private readonly EffectController _effect;
-    private readonly RadioMenuFlyoutItem[] _presetItems;
+    private Preset[] _menuPresets = [];
+    private RadioMenuFlyoutItem[] _presetItems = [];
     private Material? _backdropMaterial;
     private bool _updating;
     private bool _preparing;
@@ -73,13 +74,6 @@ public sealed partial class FlyoutWindow : Window
         InstallNoteText.Text = Strings.InstallNote;
         MaterialPicker.SetSize(28, 12);
         MaterialPicker.MaterialPicked += material => _effect.Edit(d => d with { Material = material });
-        _presetItems = Materials.BuiltInPresets.Select(preset =>
-        {
-            var item = new RadioMenuFlyoutItem { Text = preset.Name, GroupName = "presets" };
-            item.Click += (_, _) => _effect.Edit(preset.ApplyTo);
-            PresetMenu.Items.Add(item);
-            return item;
-        }).ToArray();
 
         _effect.Changed += () =>
         {
@@ -225,10 +219,11 @@ public sealed partial class FlyoutWindow : Window
             bool pending = effect.IsPending;
             ApplyButton.Content = busy ? Strings.Applying : Strings.Apply;
             ApplyButton.IsEnabled = pending && !busy;
-            int preset = Materials.MatchPreset(draft);
+            UpdatePresetMenu();
+            var preset = effect.Presets.Match(draft);
             for (int i = 0; i < _presetItems.Length; i++)
-                _presetItems[i].IsChecked = i == preset;
-            PresetText.Text = preset >= 0 ? Materials.BuiltInPresets[preset].Name : Strings.PresetCustom;
+                _presetItems[i].IsChecked = ReferenceEquals(_menuPresets[i], preset);
+            PresetText.Text = preset?.Name ?? Strings.PresetCustom;
             PresetButton.IsEnabled = !busy;
 
             var blend = draft.CurrentBlend;
@@ -287,6 +282,27 @@ public sealed partial class FlyoutWindow : Window
             return;
         byte alpha = Materials.PercentToAlpha((int)Math.Round(e.NewValue));
         _effect.Edit(d => d.WithCurrentBlend(d.CurrentBlend with { A = alpha }));
+    }
+
+    /// <summary>Built-in presets, then the user's own below a separator; rebuilt when the list changes.</summary>
+    private void UpdatePresetMenu()
+    {
+        var presets = _effect.Presets.All.ToArray();
+        if (presets.SequenceEqual(_menuPresets, ReferenceEqualityComparer.Instance))
+            return;
+        _menuPresets = presets;
+        PresetMenu.Items.Clear();
+        _presetItems = new RadioMenuFlyoutItem[presets.Length];
+        for (int i = 0; i < presets.Length; i++)
+        {
+            var preset = presets[i];
+            if (preset is CustomPreset && i > 0 && presets[i - 1] is BuiltInPreset)
+                PresetMenu.Items.Add(new MenuFlyoutSeparator());
+            var item = new RadioMenuFlyoutItem { Text = preset.Name, GroupName = "presets" };
+            item.Click += (_, _) => _effect.Edit(preset.ApplyTo);
+            PresetMenu.Items.Add(item);
+            _presetItems[i] = item;
+        }
     }
 
     private void OnPresetButton(object sender, RoutedEventArgs e) =>

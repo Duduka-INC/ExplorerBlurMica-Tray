@@ -12,11 +12,23 @@ public enum Material
     Blur,
 }
 
-/// <summary>A built-in preset; <see cref="TintPercent"/> is null where the tint does not apply.</summary>
-public sealed record Preset(string Name, Material Material, int? TintPercent)
+/// <summary>A named look for Explorer, picked from the flyout or the Presets page.</summary>
+public abstract record Preset(string Name)
 {
+    public abstract Material Material { get; }
+
+    public abstract EffectSettings ApplyTo(EffectSettings draft);
+
+    public abstract bool Matches(EffectSettings settings);
+}
+
+/// <summary>A built-in preset; <see cref="TintPercent"/> is null where the tint does not apply.</summary>
+public sealed record BuiltInPreset(string Name, Material Material, int? TintPercent) : Preset(Name)
+{
+    public override Material Material { get; } = Material;
+
     /// <summary>Sets the material and, where it applies, the tint of the current theme.</summary>
-    public EffectSettings ApplyTo(EffectSettings draft)
+    public override EffectSettings ApplyTo(EffectSettings draft)
     {
         var result = draft with { Material = Material };
         return TintPercent is { } tint
@@ -24,9 +36,19 @@ public sealed record Preset(string Name, Material Material, int? TintPercent)
             : result;
     }
 
-    public bool Matches(EffectSettings settings) =>
+    public override bool Matches(EffectSettings settings) =>
         settings.Material == Material
         && (TintPercent is not { } tint || Materials.PercentToAlpha(tint) == settings.CurrentBlend.A);
+}
+
+/// <summary>A preset the user saved: material, both blend colors and the extra options.</summary>
+public sealed record CustomPreset(string Name, EffectSettings Settings) : Preset(Name)
+{
+    public override Material Material => Settings.Material;
+
+    public override EffectSettings ApplyTo(EffectSettings draft) => Settings;
+
+    public override bool Matches(EffectSettings settings) => !settings.DiffersFrom(Settings);
 }
 
 internal static class Materials
@@ -43,7 +65,7 @@ internal static class Materials
         _ => material.ToString(),
     };
 
-    public static readonly Preset[] BuiltInPresets =
+    public static readonly BuiltInPreset[] BuiltInPresets =
     [
         new("Default", Material.Default, null),
         new(Strings.PresetGlass, Material.Acrylic, 47),
@@ -65,9 +87,6 @@ internal static class Materials
         Material.Mica or Material.MicaAlt => Strings.TintHintMica,
         _ => "",
     };
-
-    /// <summary>Index of the built-in preset <paramref name="settings"/> matches, or -1.</summary>
-    public static int MatchPreset(EffectSettings settings) => Array.FindIndex(BuiltInPresets, p => p.Matches(settings));
 
     public static Material FromEffect(EbmEffect effect) => effect switch
     {

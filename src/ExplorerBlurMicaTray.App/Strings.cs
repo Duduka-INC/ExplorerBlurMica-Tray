@@ -1,4 +1,5 @@
 using System.Globalization;
+using ExplorerBlurMicaTray.Core;
 using Microsoft.Win32;
 
 namespace ExplorerBlurMicaTray.App;
@@ -114,7 +115,7 @@ internal static class Strings
     public static string BlendSystemSubtitle => T("Системный цвет, как у остальных окон Windows", "The system color, as in other Windows apps");
     public static string BlendCustomSubtitle => T("Свой цвет поверх размытия. Плотность — насколько он закрывает фон.",
         "Your color over the blur. Density is how much of the background it covers.");
-    public static string BlendColor => T("Цвет подложки", "Blend color");
+    public static string BlendColorName => T("Цвет подложки", "Blend color");
     public static string BlendDensity => T("Плотность", "Density");
     public static string BlendSystem => T("Системный", "System");
     public static string AdvancedTitle => T("Дополнительно", "More options");
@@ -138,6 +139,40 @@ internal static class Strings
         ? T($"Окна Проводника переоткроются (открыто: {windows}).", $"File Explorer windows will reopen ({windows} open).")
         : T("Новые окна Проводника откроются уже с изменениями.", "New File Explorer windows will open with the changes.");
     public static string Discard => T("Отменить", "Discard");
+
+    // Settings → Presets
+    public static string PresetsIntro => T("Пресет хранит материал, цвета для обеих тем и дополнительные параметры.",
+        "A preset keeps the material, the blend colors for both themes and the extra options.");
+    public static string PresetSaveCurrent => T("Сохранить текущие как…", "Save current as…");
+    public static string PresetsEmptyHint => T("Свои пресеты появятся здесь: настройте эффект и сохраните его кнопкой выше.",
+        "Your presets show up here: set up the effect and save it with the button above.");
+    public static string ChipActive => T("Активен", "Active");
+    public static string ChipBuiltIn => T("Встроенный", "Built-in");
+    public static string PresetMeta(Material material, BlendColor blend) => material switch
+    {
+        Material.Default => T("Обычный Проводник, без эффекта", "Plain File Explorer, no effect"),
+        Material.Blur => T("Blur · без подкраски", "Blur · no tint"),
+        Material.Mica => T("Mica · размытые обои под окном", "Mica · blurred wallpaper under the window"),
+        Material.MicaAlt => T("Mica Alt · больше цвета обоев", "Mica Alt · more of the wallpaper's color"),
+        Material.Acrylic when blend.A == 0 => T("Acrylic · системный цвет", "Acrylic · system color"),
+        Material.Acrylic => T($"Acrylic · #{blend.R:X2}{blend.G:X2}{blend.B:X2} · плотность {Materials.AlphaToPercent(blend.A)} %",
+            $"Acrylic · #{blend.R:X2}{blend.G:X2}{blend.B:X2} · density {Materials.AlphaToPercent(blend.A)}%"),
+        _ => Materials.Label(material),
+    };
+    public static string Rename => T("Переименовать", "Rename");
+    public static string Delete => T("Удалить", "Delete");
+    public static string More => T("Ещё", "More");
+    public static string Save => T("Сохранить", "Save");
+    public static string Cancel => T("Отмена", "Cancel");
+    public static string SavePresetTitle => T("Сохранить пресет", "Save preset");
+    public static string RenamePresetTitle => T("Переименовать пресет", "Rename preset");
+    public static string PresetNamePlaceholder => T("Название", "Name");
+    public static string PresetDefaultName => T("Мой пресет", "My preset");
+    public static string PresetNameEmpty => T("Введите название", "Enter a name");
+    public static string PresetNameTaken => T("Пресет с таким названием уже есть", "A preset with this name already exists");
+    public static string DeletePresetTitle(string name) => T($"Удалить пресет «{name}»?", $"Delete the “{name}” preset?");
+    public static string DeletePresetBody => T("Отменить удаление будет нельзя.", "This can't be undone.");
+    public static string PresetsSaveError => T("Не удалось сохранить пресеты", "Couldn't save the presets");
 
     // The File Explorer window drawn in the preview
     public static string SketchFolder => T("Документы", "Documents");

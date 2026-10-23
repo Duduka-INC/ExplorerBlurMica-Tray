@@ -1,4 +1,5 @@
 using ExplorerBlurMicaTray.Core;
+using ExplorerBlurMicaTray.Core.Presets;
 
 namespace ExplorerBlurMicaTray.App;
 
@@ -62,12 +63,14 @@ public sealed class EffectController : IDisposable
         var defaults = EffectSettings.From(new EbmConfig { Effect = EbmConstants.InstallDefaultEffect }, disabled: false);
         Applied = defaults;
         Draft = defaults;
+        Presets.Changed += Raise;
     }
 
-    /// <summary>Raised on the UI thread whenever anything here changes.</summary>
+    /// <summary>Raised on the UI thread whenever anything here changes, presets included.</summary>
     public event Action? Changed;
 
     public EbmInstaller Installer { get; }
+    public PresetLibrary Presets { get; } = new(PresetFile.DefaultPath);
     public EbmStatus Status { get; private set; } = new(EbmState.NotInstalled, null, null);
     public EffectSettings Applied { get; private set; }
     public EffectSettings Draft { get; private set; }
