@@ -81,7 +81,7 @@ public sealed partial class FlyoutWindow : Window
         TitleText.Text = Strings.FlyoutTitle;
         TransparencyBar.Title = Strings.TransparencyOffTitle;
         TransparencyBar.Message = Strings.TransparencyOffMessage;
-        ColorSettingsButton.Content = "Открыть параметры Windows";
+        ColorSettingsButton.Content = Strings.OpenWindowsSettings;
         InstallTitleText.Text = Strings.InstallTitle;
         InstallBodyText.Text = Strings.InstallBody;
         InstallNoteText.Text = Strings.InstallNote;

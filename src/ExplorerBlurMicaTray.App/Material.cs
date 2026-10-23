@@ -32,10 +32,10 @@ internal static class Materials
     public static readonly Preset[] BuiltInPresets =
     [
         new("Default", Material.Default, null),
-        new("Стекло", Material.Acrylic, 47),
+        new(Strings.PresetGlass, Material.Acrylic, 47),
         new("Mica", Material.Mica, null),
-        new("Глубокий", Material.MicaAlt, null),
-        new("Чистое размытие", Material.Blur, null),
+        new(Strings.PresetDeep, Material.MicaAlt, null),
+        new(Strings.PresetClearBlur, Material.Blur, null),
     ];
 
     /// <summary>

@@ -22,7 +22,14 @@ internal sealed unsafe partial class TrayIcon : IDisposable
     private const uint MF_STRING = 0, MF_SEPARATOR = 0x800, MF_CHECKED = 8;
     private const uint TPM_RETURNCMD = 0x100, TPM_RIGHTBUTTON = 2, TPM_BOTTOMALIGN = 0x20, TPM_RIGHTALIGN = 8;
 
+    // uxtheme exports that exist only as ordinals (stable since Windows 10 1903).
+    private const int OrdinalAllowDarkModeForWindow = 133;
+    private const int OrdinalSetPreferredAppMode = 135;
+    private const int OrdinalFlushMenuThemes = 136;
+    private const int PreferredAppModeAllowDark = 1;
+
     private static TrayIcon? s_instance;
+    private readonly delegate* unmanaged[Stdcall]<void> _flushMenuThemes;
     private readonly nint _hwnd;
     private readonly nint _hIcon;
     private readonly string _tooltip;
@@ -44,7 +51,26 @@ internal sealed unsafe partial class TrayIcon : IDisposable
             _taskbarCreated = RegisterWindowMessageW(name);
 
         SetWindowSubclass(hwnd, &SubclassProc, 1, 0);
+        _flushMenuThemes = EnableDarkMenus(hwnd);
         Add();
+    }
+
+    /// <summary>
+    /// Native popup menus are light by default; this lets them follow the Windows app theme, as
+    /// Notepad++ and other Win32 apps do. Returns FlushMenuThemes, to pick up a theme change.
+    /// </summary>
+    private static delegate* unmanaged[Stdcall]<void> EnableDarkMenus(nint hwnd)
+    {
+        if (!NativeLibrary.TryLoad("uxtheme.dll", out nint uxtheme))
+            return null;
+        var setPreferredAppMode = (delegate* unmanaged[Stdcall]<int, int>)GetProcAddress(uxtheme, OrdinalSetPreferredAppMode);
+        var allowDarkModeForWindow = (delegate* unmanaged[Stdcall]<nint, int, int>)GetProcAddress(uxtheme, OrdinalAllowDarkModeForWindow);
+        var flushMenuThemes = (delegate* unmanaged[Stdcall]<void>)GetProcAddress(uxtheme, OrdinalFlushMenuThemes);
+        if (setPreferredAppMode is not null)
+            setPreferredAppMode(PreferredAppModeAllowDark);
+        if (allowDarkModeForWindow is not null)
+            allowDarkModeForWindow(hwnd, 1);
+        return flushMenuThemes;
     }
 
     private void Add()
@@ -65,6 +91,8 @@ internal sealed unsafe partial class TrayIcon : IDisposable
         if (items.Count == 0)
             return;
 
+        if (_flushMenuThemes is not null)
+            _flushMenuThemes();
         nint menu = CreatePopupMenu();
         for (int i = 0; i < items.Count; i++)
         {
@@ -144,6 +172,7 @@ internal sealed unsafe partial class TrayIcon : IDisposable
         public int X, Y;
     }
 
+    [LibraryImport("kernel32.dll")] private static partial nint GetProcAddress(nint module, nint ordinal);
     [LibraryImport("shell32.dll")] private static partial int Shell_NotifyIconW(uint msg, NOTIFYICONDATAW* data);
     [LibraryImport("user32.dll")] private static partial nint LoadImageW(nint hInst, char* name, uint type, int cx, int cy, uint flags);
     [LibraryImport("user32.dll")] private static partial int GetSystemMetrics(int index);

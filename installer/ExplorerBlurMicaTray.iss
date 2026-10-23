@@ -66,8 +66,6 @@ en.WelcomeLabel2=This will install [name/ver] on your computer.%n%nThe File Expl
 ru.WelcomeLabel2=Программа установит [name/ver] на ваш компьютер.%n%nЭффекты в Проводнике делает ExplorerBlurMica от Maplespe. Программа установки скачает его официальный релиз с GitHub.
 
 [CustomMessages]
-en.TaskInstallEbm=Download and install ExplorerBlurMica {#EbmVersion} by Maplespe (about 275 KB from GitHub)
-ru.TaskInstallEbm=Скачать и установить ExplorerBlurMica {#EbmVersion} от Maplespe (около 275 КБ с GitHub)
 en.StatusRegistering=Registering ExplorerBlurMica...
 ru.StatusRegistering=Регистрация ExplorerBlurMica...
 en.RunRestartExplorer=Restart File Explorer to turn the effect on (the taskbar disappears for a moment)
@@ -84,7 +82,6 @@ en.UninstallRestartNote=File Explorer windows keep the effect until Explorer res
 ru.UninstallRestartNote=Окна Проводника сохранят эффект, пока Проводник не перезапустится. Выйдите из системы или перезагрузите компьютер, чтобы убрать его полностью; оставшиеся файлы удалятся при следующей перезагрузке.
 
 [Tasks]
-Name: "installebm"; Description: "{cm:TaskInstallEbm}"
 Name: "autostart"; Description: "{cm:TaskAutostart}"
 
 [Files]
@@ -99,6 +96,9 @@ Name: "{autoprograms}\ExplorerBlurMica Tray"; Filename: "{app}\{#AppExe}"
 ; ExplorerBlurMica is machine-wide, so the tray app starts for every account.
 Root: HKLM; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "ExplorerBlurMica Tray"; \
   ValueData: """{app}\{#AppExe}"""; Flags: uninsdeletevalue; Tasks: autostart
+; The app speaks the language picked in Setup (read by Strings in the app).
+Root: HKLM; Subkey: "Software\ExplorerBlurMica-Tray"; ValueType: string; ValueName: "Language"; \
+  ValueData: "{language}"; Flags: uninsdeletekey
 
 [Run]
 ; ExplorerBlurMica hooks Explorer when the process starts, so a fresh registration needs a restart,
@@ -124,11 +124,12 @@ begin
   DownloadPage.ShowBaseNameInsteadOfUrl := True;
 end;
 
-// Downloads ExplorerBlurMica before installing. A failed download does not stop Setup.
+// Downloads ExplorerBlurMica before installing; the app does nothing without it. A failed
+// download (no network) still installs the app, which can fetch ExplorerBlurMica later.
 function NextButtonClick(CurPageID: Integer): Boolean;
 begin
   Result := True;
-  if (CurPageID <> wpReady) or not WizardIsTaskSelected('installebm') then
+  if CurPageID <> wpReady then
     Exit;
 
   DownloadPage.Clear;
