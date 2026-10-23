@@ -22,21 +22,21 @@ ExplorerBlurMica adds Blur, Acrylic and Mica backgrounds to Windows File Explore
 
 Get `ExplorerBlurMica-Tray-Setup-<version>.exe` from [Releases](https://github.com/Duduka-INC/ExplorerBlurMica-Tray/releases) and run it. Setup asks for administrator rights once, downloads the official ExplorerBlurMica release, checks its SHA-256, registers it and restarts File Explorer.
 
-The installer is not code-signed, so Windows SmartScreen may warn about an unknown publisher: choose **More info â†’ Run anyway**.
+The installer is not code-signed, so Windows SmartScreen may warn about an unknown publisher: choose **More info → Run anyway**.
 
 ## Features
 
 - **Tray icon.** A left click opens a small panel: pick Default, Mica, Mica Alt, Acrylic or Blur, set the blend color density, choose a preset and press Apply. A right click opens a menu with the settings window, a Default switch, reopening Explorer windows and exit. The panel's own background follows the material you pick.
-- **Settings â†’ Effect.** A preview of a File Explorer window over your wallpaper, the material, the blend color for the current Windows theme (or the system color), and the extra options: transparent top bar (tabs, address bar, search, command bar), no scroll bar background, divider line.
-- **Settings â†’ Presets.** Built-in presets and your own: save the current settings under a name, apply, rename, delete. Your presets also show up in the tray panel. They are kept in `%LocalAppData%\ExplorerBlurMica-Tray\presets.json`.
-- **Settings â†’ General.** Start with Windows, display language (English or Russian), what a left click on the tray icon opens, ExplorerBlurMica status with update check, reinstall and remove.
+- **Settings → Effect.** A preview of a File Explorer window over your wallpaper, the material, the blend color for the current Windows theme (or the system color), and the extra options: transparent top bar (tabs, address bar, search, command bar), no scroll bar background, divider line.
+- **Settings → Presets.** Built-in presets and your own: save the current settings under a name, apply, rename, delete. Your presets also show up in the tray panel. They are kept in `%LocalAppData%\ExplorerBlurMica-Tray\presets.json`.
+- **Settings → General.** Start with Windows, display language (English or Russian), what a left click on the tray icon opens, ExplorerBlurMica status with update check, reinstall and remove.
 - Changes take effect by reopening open Explorer windows on the same folders. Only switching to or from Default restarts Explorer.
 
 ## Requirements
 
 - Windows 10 or Windows 11, 64-bit
 - Mica and Mica Alt require Windows 11
-- "Transparency effects" must be enabled in Settings â†’ Personalization â†’ Colors
+- "Transparency effects" must be enabled in Settings → Personalization → Colors
 
 Supported effects depend on the Windows version; see the [ExplorerBlurMica README](https://github.com/Maplespe/ExplorerBlurMica#readme) for details.
 
@@ -45,11 +45,11 @@ Supported effects depend on the Windows version; see the [ExplorerBlurMica READM
 - **Default** turns ExplorerBlurMica off by unregistering it, since its config has no "no effect" value. Explorer only loads it from a machine-wide registration, so switching to and from Default asks for administrator rights and restarts Explorer; switching between materials does neither.
 - A fresh install uses Acrylic: Mica, ExplorerBlurMica's own default, draws nothing on recent Windows 11 builds (upstream issue [#299](https://github.com/Maplespe/ExplorerBlurMica/issues/299)).
 - The blend color is drawn only with Acrylic. A density of 0 keeps the system acrylic tint.
-- Windows hides new tray icons behind the arrow. To keep the icon visible, turn it on under Settings â†’ Personalization â†’ Taskbar â†’ Other system tray icons (Settings â†’ General has a shortcut).
+- Windows hides new tray icons behind the arrow. To keep the icon visible, turn it on under Settings → Personalization → Taskbar → Other system tray icons (Settings → General has a shortcut).
 
 ## Troubleshooting
 
-If File Explorer crashes after enabling the effect, hold `Esc` while opening Explorer: ExplorerBlurMica will not load, and you can remove it from the app (Settings â†’ General) or with the original `uninstall.cmd`.
+If File Explorer crashes after enabling the effect, hold `Esc` while opening Explorer: ExplorerBlurMica will not load, and you can remove it from the app (Settings → General) or with the original `uninstall.cmd`.
 
 ## Building
 
@@ -62,9 +62,9 @@ dotnet test ExplorerBlurMicaTray.slnx
 
 The solution holds:
 
-- `ExplorerBlurMicaTray.App` â€” the tray app and settings window (WinUI 3, unpackaged, Native AOT).
-- `ExplorerBlurMicaTray.Core` â€” installing, configuring and applying ExplorerBlurMica, autostart and presets.
-- `ebmt` â€” a small command-line tool over the core, also used by the installer:
+- `ExplorerBlurMicaTray.App` — the tray app and settings window (WinUI 3, unpackaged, Native AOT).
+- `ExplorerBlurMicaTray.Core` — installing, configuring and applying ExplorerBlurMica, autostart and presets.
+- `ebmt` — a small command-line tool over the core, also used by the installer:
 
 ```
 ebmt status                     ExplorerBlurMica state, transparency, open Explorer windows
