@@ -15,6 +15,9 @@ public enum Material
 /// <summary>A named look for Explorer, picked from the flyout or the Presets page.</summary>
 public abstract record Preset(string Name)
 {
+    /// <summary>Remembers which preset the user picked; unlike the name, it doesn't change with the language.</summary>
+    public abstract string Key { get; }
+
     public abstract Material Material { get; }
 
     public abstract EffectSettings ApplyTo(EffectSettings draft);
@@ -23,8 +26,10 @@ public abstract record Preset(string Name)
 }
 
 /// <summary>A built-in preset; <see cref="TintPercent"/> is null where the tint does not apply.</summary>
-public sealed record BuiltInPreset(string Name, Material Material, int? TintPercent) : Preset(Name)
+public sealed record BuiltInPreset(string Key, string Name, Material Material, int? TintPercent) : Preset(Name)
 {
+    public override string Key { get; } = Key;
+
     public override Material Material { get; } = Material;
 
     /// <summary>Sets the material and, where it applies, the tint of the current theme.</summary>
@@ -44,6 +49,9 @@ public sealed record BuiltInPreset(string Name, Material Material, int? TintPerc
 /// <summary>A preset the user saved: material, both blend colors and the extra options.</summary>
 public sealed record CustomPreset(string Name, EffectSettings Settings) : Preset(Name)
 {
+    /// <summary>Names of the user's presets are unique, so the name keys them.</summary>
+    public override string Key => "custom:" + Name;
+
     public override Material Material => Settings.Material;
 
     public override EffectSettings ApplyTo(EffectSettings draft) => Settings;
@@ -67,11 +75,11 @@ internal static class Materials
 
     public static readonly BuiltInPreset[] BuiltInPresets =
     [
-        new("Default", Material.Default, null),
-        new(Strings.PresetGlass, Material.Acrylic, 47),
-        new("Mica", Material.Mica, null),
-        new(Strings.PresetDeep, Material.MicaAlt, null),
-        new(Strings.PresetClearBlur, Material.Blur, null),
+        new("default", "Default", Material.Default, null),
+        new("glass", Strings.PresetGlass, Material.Acrylic, 47),
+        new("mica", "Mica", Material.Mica, null),
+        new("deep", Strings.PresetDeep, Material.MicaAlt, null),
+        new("clear-blur", Strings.PresetClearBlur, Material.Blur, null),
     ];
 
     /// <summary>

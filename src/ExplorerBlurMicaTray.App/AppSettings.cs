@@ -47,6 +47,24 @@ internal static class AppSettings
         set => Write("LeftClick", value ? "settings" : "flyout");
     }
 
+    /// <summary>The key of the preset the user picked last, or null.</summary>
+    public static string? SelectedPreset
+    {
+        get => Read(Registry.CurrentUser, "Preset");
+        set
+        {
+            if (value is null)
+            {
+                using var key = Registry.CurrentUser.OpenSubKey(KeyPath, writable: true);
+                key?.DeleteValue("Preset", throwOnMissingValue: false);
+            }
+            else
+            {
+                Write("Preset", value);
+            }
+        }
+    }
+
     private static string? Read(RegistryKey hive, string name)
     {
         using var key = hive.OpenSubKey(KeyPath);

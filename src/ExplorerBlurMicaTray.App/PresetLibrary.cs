@@ -7,6 +7,7 @@ public sealed class PresetLibrary
 {
     private readonly string _path;
     private readonly List<CustomPreset> _custom;
+    private string? _selectedKey = AppSettings.SelectedPreset;
 
     public PresetLibrary(string path)
     {
@@ -14,7 +15,7 @@ public sealed class PresetLibrary
         _custom = Load(path);
     }
 
-    /// <summary>Raised after a preset is added, renamed or deleted.</summary>
+    /// <summary>Raised after a preset is added, renamed, deleted or picked.</summary>
     public event Action? Changed;
 
     public IReadOnlyList<CustomPreset> Custom => _custom;
@@ -22,11 +23,33 @@ public sealed class PresetLibrary
     public IEnumerable<Preset> All => Materials.BuiltInPresets.Concat<Preset>(_custom);
 
     /// <summary>
-    /// The preset that looks like <paramref name="settings"/>. The user's own come first: they
-    /// match every setting, while a built-in one matches any look with its material (and density).
+    /// The one preset to show as current for <paramref name="settings"/>. Several presets can give
+    /// the same look (a saved Blur look and the built-in Clear blur, say), so the one the user picked
+    /// last wins while it still gives this look. Otherwise, such as after editing by hand, the first
+    /// that matches: the user's own come first, as they match every setting, while a built-in one
+    /// matches any look with its material (and density).
     /// </summary>
-    public Preset? Match(EffectSettings settings) =>
-        (Preset?)_custom.FirstOrDefault(p => p.Matches(settings)) ?? Materials.BuiltInPresets.FirstOrDefault(p => p.Matches(settings));
+    public Preset? Current(EffectSettings settings)
+    {
+        if (All.FirstOrDefault(p => p.Key == _selectedKey) is { } selected && selected.Matches(settings))
+            return selected;
+        return (Preset?)_custom.FirstOrDefault(p => p.Matches(settings)) ?? Materials.BuiltInPresets.FirstOrDefault(p => p.Matches(settings));
+    }
+
+    /// <summary>Remembers <paramref name="preset"/> as the user's pick, also across restarts.</summary>
+    public void Select(Preset preset)
+    {
+        SetSelected(preset.Key);
+        Changed?.Invoke();
+    }
+
+    private void SetSelected(string? key)
+    {
+        if (key == _selectedKey)
+            return;
+        _selectedKey = key;
+        AppSettings.SelectedPreset = key;
+    }
 
     /// <summary>Why <paramref name="name"/> can't be used, or null if it can.</summary>
     public string? Check(string name, Preset? renaming = null)
@@ -38,17 +61,26 @@ public sealed class PresetLibrary
         return taken ? Strings.PresetNameTaken : null;
     }
 
+    /// <summary>Saves the settings as a new preset, which becomes the user's pick.</summary>
     /// <exception cref="IOException">The file could not be written; nothing changes then.</exception>
-    public void Add(string name, EffectSettings settings) =>
-        Update([.. _custom, new CustomPreset(name.Trim(), settings)]);
+    public void Add(string name, EffectSettings settings)
+    {
+        var preset = new CustomPreset(name.Trim(), settings);
+        Update([.. _custom, preset], preset.Key);
+    }
 
-    public void Rename(CustomPreset preset, string name) =>
-        Update(_custom.Select(p => ReferenceEquals(p, preset) ? p with { Name = name.Trim() } : p).ToList());
+    public void Rename(CustomPreset preset, string name)
+    {
+        var renamed = preset with { Name = name.Trim() };
+        Update(_custom.Select(p => ReferenceEquals(p, preset) ? renamed : p).ToList(),
+            _selectedKey == preset.Key ? renamed.Key : _selectedKey);
+    }
 
     public void Delete(CustomPreset preset) =>
-        Update(_custom.Where(p => !ReferenceEquals(p, preset)).ToList());
+        Update(_custom.Where(p => !ReferenceEquals(p, preset)).ToList(),
+            _selectedKey == preset.Key ? null : _selectedKey);
 
-    private void Update(List<CustomPreset> presets)
+    private void Update(List<CustomPreset> presets, string? selectedKey)
     {
         try
         {
@@ -60,6 +92,7 @@ public sealed class PresetLibrary
         }
         _custom.Clear();
         _custom.AddRange(presets);
+        SetSelected(selectedKey);
         Changed?.Invoke();
     }
 

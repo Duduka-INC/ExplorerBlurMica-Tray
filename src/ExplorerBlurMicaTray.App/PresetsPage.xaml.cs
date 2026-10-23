@@ -65,11 +65,11 @@ public sealed partial class PresetsPage : UserControl
         SaveButton.IsEnabled = effect.Installed;
         EmptyHint.Visibility = effect.Presets.Custom.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
 
-        // Every preset that gives the applied look is marked active. Applying one of them would
-        // change nothing, so none of them offers Apply.
+        // One tile is marked: the preset the user picked, while it still gives the applied look.
+        var active = effect.Installed ? effect.Presets.Current(effect.Applied) : null;
         Tiles.Children.Clear();
         foreach (var preset in effect.Presets.All)
-            Tiles.Children.Add(Tile(preset, effect.Installed && preset.Matches(effect.Applied), effect));
+            Tiles.Children.Add(Tile(preset, ReferenceEquals(preset, active), effect));
         _columns = 0;
         Arrange();
     }
@@ -300,6 +300,8 @@ public sealed partial class PresetsPage : UserControl
         if (_effect is not { } effect)
             return;
         _applying = preset;
+        // Picking a preset that gives the look already applied only moves the mark; Explorer stays as it is.
+        effect.Presets.Select(preset);
         effect.Edit(preset.ApplyTo);
         _ = effect.ApplyAsync();
     }

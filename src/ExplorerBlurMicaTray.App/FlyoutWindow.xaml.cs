@@ -220,7 +220,7 @@ public sealed partial class FlyoutWindow : Window
             ApplyButton.Content = busy ? Strings.Applying : Strings.Apply;
             ApplyButton.IsEnabled = pending && !busy;
             UpdatePresetMenu();
-            var preset = effect.Presets.Match(draft);
+            var preset = effect.Presets.Current(draft);
             for (int i = 0; i < _presetItems.Length; i++)
                 _presetItems[i].IsChecked = ReferenceEquals(_menuPresets[i], preset);
             PresetText.Text = preset?.Name ?? Strings.PresetCustom;
@@ -299,7 +299,11 @@ public sealed partial class FlyoutWindow : Window
             if (preset is CustomPreset && i > 0 && presets[i - 1] is BuiltInPreset)
                 PresetMenu.Items.Add(new MenuFlyoutSeparator());
             var item = new RadioMenuFlyoutItem { Text = preset.Name, GroupName = "presets" };
-            item.Click += (_, _) => _effect.Edit(preset.ApplyTo);
+            item.Click += (_, _) =>
+            {
+                _effect.Presets.Select(preset);
+                _effect.Edit(preset.ApplyTo);
+            };
             PresetMenu.Items.Add(item);
             _presetItems[i] = item;
         }
